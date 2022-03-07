@@ -9,9 +9,9 @@ library(stringr)
 library(purrr)
 
 # READ FILES=======================================================================================================================
-cta_station <- read.table(file = "cta_data.tsv", sep = "\t", header = TRUE, quote = "\"")
+cta_station <- read.table(file = "C:/Users/aranga22/Downloads/Academics/Sem 2/424 Visual Data/Projects/424_Project2/Data/cta_data.tsv", sep = "\t", header = TRUE, quote = "\"")
 head(cta_station)
-lat_long <- read.table(file = "lat_long.tsv", sep = "\t", header = TRUE, quote = "\"")
+lat_long <- read.table(file = "C:/Users/aranga22/Downloads/Academics/Sem 2/424 Visual Data/Projects/424_Project2/Data/lat_long.tsv", sep = "\t", header = TRUE, quote = "\"")
 head(lat_long)
 
 # STATS============================================================================================================================
@@ -94,6 +94,9 @@ final_data$line[final_data$stationname == 'Homan'] = "Green Line"
 ok <- complete.cases(final_data)
 dim(final_data[ok, ]) == dim(final_data)
 
+# write.table(final_data, file='final_data.tsv', quote=FALSE, sep='\t')
+
+# Export data
 no_of_chunks <- 30
 f <- ceiling(1:nrow(final_data) / nrow(final_data) * 25)
 res <- split(final_data, f)
