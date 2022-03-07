@@ -100,7 +100,7 @@ dim(final_data[ok, ]) == dim(final_data)
 no_of_chunks <- 30
 f <- ceiling(1:nrow(final_data) / nrow(final_data) * 25)
 res <- split(final_data, f)
-map2(res, paste0("part_", names(res), ".tsv"), write.csv)
+map2(res, paste0("part_", names(res), ".csv"), write.csv)
 
 # ALITER============================================================================================================================
 # library(qdapRegex)
