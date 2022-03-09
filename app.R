@@ -1,4 +1,5 @@
-setwd("C:/Users/aranga22/Downloads/Academics/Sem 2/424 Visual Data/Projects/424_Project2")
+#setwd("C:/Users/aranga22/Downloads/Academics/Sem 2/424 Visual Data/Projects/424_Project2")
+setwd("C:/Users/Krishnan CS/424_Project2")
 getwd()
 
 # LIBRARIES=======================================================================================================
@@ -6,23 +7,31 @@ library(lubridate)
 library(DT)
 library(ggplot2)
 library(leaflet)
+library(leaflet.extras)
 library(dplyr)
 library(tidyr)
 library(scales)
 library(shiny)
 library(shinyjs)
 library(shinydashboard)
+library(stringr)
+
+options(scipen=999)
+
 
 # READ DATA=======================================================================================================
 df <- do.call(rbind, lapply(list.files(pattern = "*.csv"), read.csv))
 df <- df[, -1]
 # Set date column in Date format
 df$date <- as.Date(df$date, "%Y-%m-%d")
-str(df)
+
+#Extracting lat and long as a separate column for leaflet map
+df$lat <- as.numeric(str_extract(df$Location, "\\d+.\\d+"))
+df$long <- as.numeric(str_extract(df$Location, "-\\d+.\\d+"))
 
 # UI==============================================================================================================
 ui <- dashboardPage(skin = "black",
-                    dashboardHeader(title = "Chicago 'L' Viszation"),
+                    dashboardHeader(title = "CS424 Project-2"),
                     dashboardSidebar(collapsed = FALSE, disable = FALSE,
                                      sidebarMenu(
                                        id = "menu_tabs",
@@ -78,9 +87,20 @@ ui <- dashboardPage(skin = "black",
                                                            width = 2
                                               ),
                                               mainPanel(
-                                                fluidRow(
-                                                  splitLayout(cellWidths = c("75%", "75%"), uiOutput("compare_plots1"), uiOutput("compare_plots2"))), width = 8))
-                        ),
+                                                fluidPage(
+                                                  #splitLayout(cellWidths = c("75%", "75%"), uiOutput("compare_plots1"), uiOutput("compare_plots2"))),
+                                                  #Leaflet Map UI
+                                                  column(
+                                                    width = 12,
+                                                    leafletOutput("map_dash") 
+                                                  )
+                                                  
+                                                  
+                                                  )
+                                                  
+                                                )
+                        )
+                      ),
                         
                         tabItem(tabName = "about",
                                 tags$div(style = "margin-top: 200px;"),
@@ -101,8 +121,34 @@ ui <- dashboardPage(skin = "black",
 )
 
 
+
 # SERVER=======================================================================================================
 server <- function(input, output){
-      log(0)
+  output$map_dash <- renderLeaflet({
+    map <- leaflet(options= leafletOptions()) %>%
+      addTiles() %>% 
+      addCircleMarkers(data = df, lat = unique(df$lat), lng =unique(df$long), 
+                       popup=unique(df$stationname)
+            
+                #,icon = list(
+                #iconUrl = 'https://icons.iconarchive.com/icons/icons8/ios7/32/Transport-Train-icon.png',
+                #iconSize = c(25, 25))
+                ) %>%
+      setView( lat = 41.8781, lng = -87.6298, zoom = 13) %>% 
+      #Different Backgrounds, have to select 3
+      addProviderTiles("Stamen.TonerLite", group = "B/w") %>%
+      addProviderTiles("OpenRailwayMap", group = "Railway") %>%
+      addProviderTiles("OpenStreetMap.Mapnik", group = "smooth") %>%
+      addProviderTiles("CartoDB.Positron", group = "Minimalist") %>%
+      #Resettable map
+      addResetMapButton() %>%
+      #Choice for background
+      addLayersControl(
+        baseGroups = c("B/w", "Railway", "smooth", "Minimalist"),
+        options = layersControlOptions(collapsed = FALSE)
+      )
+    
+    return(map)
+  })
 }
 shinyApp(ui = ui, server = server)
