@@ -1,6 +1,6 @@
 #setwd("C:/Users/aranga22/Downloads/Academics/Sem 2/424 Visual Data/Projects/424_Project2")
-setwd("C:/Users/Krishnan CS/424_Project2")
-getwd()
+#setwd("C:/Users/Krishnan CS/424_Project2")
+#print(getwd())
 
 # LIBRARIES=======================================================================================================
 library(lubridate)
@@ -28,6 +28,12 @@ df$date <- as.Date(df$date, "%Y-%m-%d")
 #Extracting lat and long as a separate column for leaflet map
 df$lat <- as.numeric(str_extract(df$Location, "\\d+.\\d+"))
 df$long <- as.numeric(str_extract(df$Location, "-\\d+.\\d+"))
+
+# Extracting ride data for Aug 23 2021
+Aug_23_ridership$line_color <-  str_extract(Aug_23_ridership$line, "\\w+")
+
+#Extracting line color data for Aug23 df
+
 
 # UI==============================================================================================================
 ui <- dashboardPage(skin = "black",
@@ -127,9 +133,15 @@ server <- function(input, output){
   output$map_dash <- renderLeaflet({
     map <- leaflet(options= leafletOptions()) %>%
       addTiles() %>% 
-      addCircleMarkers(data = df, lat = unique(df$lat), lng =unique(df$long), 
-                       popup=unique(df$stationname)
-            
+      addCircleMarkers(data = Aug_23_ridership, lat = ~lat, lng = ~long, 
+                       #Taking the log and scaling the radius
+                       radius = ~log(rides+10)*1.25,
+                       color = ~line_color,
+                       popup = paste("<center><strong>" ,Aug_23_ridership$stationname, "</strong>", "<br>",
+                                     Aug_23_ridership$line, "<br>",
+                                     "Rides: ", Aug_23_ridership$rides, "<br> </center>"
+                                     )
+                             
                 #,icon = list(
                 #iconUrl = 'https://icons.iconarchive.com/icons/icons8/ios7/32/Transport-Train-icon.png',
                 #iconSize = c(25, 25))
