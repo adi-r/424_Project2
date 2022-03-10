@@ -94,7 +94,7 @@ ui <- dashboardPage(skin = "black",
                                               ),
                                               mainPanel(
                                                 fluidPage(
-                                                  splitLayout(cellWidths = c("50%", "50%"), leafletOutput("map_dash"), uiOutput("plot_and_table")),
+                                                  splitLayout(cellWidths = c("50%", "80%"), leafletOutput("map_dash"), uiOutput("plot_and_table")),
                                                   #Leaflet Map UI
                                                   # column(width = 12,
                                                   #        leafletOutput("map_dash"))
@@ -206,6 +206,7 @@ server <- function(input, output, session){
     return(map)
   })
   
+ 
  # BARPLOT=====================================================================================================
   
   # Dataframe for BAR TABLE
@@ -215,11 +216,9 @@ server <- function(input, output, session){
     if(sort_condn == 'alpha'){
       date_frame <- date_frame[order(date_frame$stationname),]
     }
-    
     else if(sort_condn == 'asc'){
       date_frame <- date_frame[order(date_frame$rides),]
     }
-    
     else{
       date_frame <- date_frame[order(-date_frame$rides),]  
     }
@@ -260,8 +259,21 @@ server <- function(input, output, session){
   #  reactive plotly function
   plot_1 <- reactive({
     data <- df[df$date == input$date,]
-    p = plot_ly(data, y = data$rides, x = data$stationname, type = "bar", text=data$line) %>%
-      layout(title = 'Ridership Data')
+    if(input$sortby == 'alpha'){
+      data <- data[order(data$stationname),]
+    }
+    else if(input$sortby == 'asc'){
+      data <- data[order(data$rides),]
+    }
+    else{
+      data <- data[order(-data$rides),]  
+    }
+    
+    yform <- list(categoryorder = "array",
+                  categoryarray = rev(data$stationname)
+                    )
+    p = plot_ly(data, y = data$stationname, x = data$rides, type = "bar", text=data$line) %>%
+      layout(title = 'Ridership Data', yaxis = yform)
     return(p)
   })
   
@@ -273,4 +285,5 @@ server <- function(input, output, session){
       )
   })
 }
+
 shinyApp(ui = ui, server = server)
