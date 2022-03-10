@@ -88,13 +88,22 @@ ui <- dashboardPage(skin = "black",
                                                                fluidRow(
                                                                  selectInput("sortby", "Bar Plot View", choices = c("Alphabetical" = "alpha", "Ascending" = 'asc', "Descending" = "desc")),
                                                                )
+                                                             ),
+                                                             fluidRow(column(8,
+                                                                             div(selectInput("year", "Year",
+                                                                                             choices = c("All", 2021:2001),
+                                                                                             selected = c(2021)
+                                                                             )
+                                                                             )
+                                                             )
                                                              )
                                                              )
                                                            
                                               ),
+                                              
                                               mainPanel(
                                                 fluidPage(
-                                                  splitLayout(cellWidths = c("50%", "80%"), leafletOutput("map_dash"), uiOutput("plot_and_table")),
+                                                  splitLayout(cellWidths = c("50%", "80%", "80%"), leafletOutput("map_dash"), uiOutput("bar_graph"), uiOutput("plot_and_table")),
                                                   #Leaflet Map UI
                                                   # column(width = 12,
                                                   #        leafletOutput("map_dash"))
@@ -127,7 +136,7 @@ ui <- dashboardPage(skin = "black",
 server <- function(input, output, session){
   updateSelectizeInput(session, 'select_station', choices = stations, server = TRUE)
   
- # MAP=========================================================================================================
+  # MAP=========================================================================================================
   # Previous day button
    observeEvent(input$prevButton,{
        date <- singleDateReactive() - days(1)
@@ -207,7 +216,8 @@ server <- function(input, output, session){
   })
   
  
- # BARPLOT=====================================================================================================
+ 
+  # BARPLOT=====================================================================================================
   
   # Dataframe for BAR TABLE
   bar_df <- function(start_date, sort_condn, end_date=NULL){
@@ -278,12 +288,209 @@ server <- function(input, output, session){
   })
   
   # Render Bar Plot and Table
-  output$plot_and_table <- renderUI({
+  output$bar_graph <- renderUI({
     fluidPage(
       fluidRow(column(8, div(renderPlotly({plot_1()})))),
       fluidRow(column(8, uiOutput("bar_table")))
       )
   })
+  
+  # GRAPHS AND TABLES===================================================================================================== 
+    
+  # Sum functions
+  week_sigma <- function(day, year, station){
+    if(year == "All"){
+      if(station == "All"){
+        sum(df[df$week_day == day,]$rides)
+      } else{
+        sum(df[df$week_day == day,]$rides)
+      }
+    }
+    else{
+      if(station == "All"){
+        sum(df[df$year == year & df$week_day == day,]$rides)
+      } else if(station == "UIC-Halsted"){
+        sum(uic_df[uic_df$year == year & uic_df$week_day == day,]$rides)
+      } else if(station == "O'Hare Airport"){
+        sum(ohare_df[ohare_df$year == year & ohare_df$week_day == day,]$ rides)
+      } else{
+        sum(racine_df[racine_df$year == year & racine_df$week_day == day,]$rides)
+      }
+    }
+  }
+  
+  month_sigma <- function(month, year, station){
+    if(year == "All"){
+      if(station == "All"){
+        sum(df[df$month_name == month,]$rides)
+      } else if(station == "UIC-Halsted"){
+        sum(uic_df[uic_df$month_name == month,]$rides)
+      } else if(station == "O'Hare Airport"){
+        sum(ohare_df[ohare_df$month_name == month,]$ rides)
+      } else{
+        sum(racine_df[racine_df$month_name == month,]$rides)
+      }
+    }
+    else{
+      if(station == "All"){
+        sum(df[df$year == year & df$month_name == month,]$rides)
+      } else if(station == "UIC-Halsted"){
+        sum(uic_df[uic_df$year == year & uic_df$month_name == month,]$rides)
+      } else if(station == "O'Hare Airport"){
+        sum(ohare_df[ohare_df$year == year & ohare_df$month_name == month,]$ rides)
+      } else{
+        sum(racine_df[racine_df$year == year & racine_df$month_name == month,]$rides)
+      }
+    }
+  }
+  
+  week_df <- function(year, station){
+    days <- c("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
+    rides <- sapply(c("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"), function(day) week_sigma(day, year, station))
+    week_frame <- data.frame(days, rides)
+    return(week_frame)
+  }
+  
+  month_df <- function(year, station){
+    month <- c("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
+    rides <- sapply(c("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"), function(month) month_sigma(month, year, station))
+    month_frame <- data.frame(month, rides)
+    return(month_frame)
+  }
+  
+  
+  # Pass dataframe to layout function
+    daily_table <- function(){
+      table_frame <- daily_df(input$year, input$select_station)
+      table_frame <- table_frame %>%
+        rename(Week_Day = days, Rides = rides)
+      return(table_frame)
+    }
+    
+    week_table <- function(){
+      table_frame <- week_df(input$year, input$select_station)
+      table_frame <- table_frame %>%
+        rename(Week_Day = days, Rides = rides)
+      return(table_frame)
+    }
+    
+    month_table <- function(){
+      table_frame <- month_df(input$year, input$select_station)
+      table_frame <- table_frame %>%
+        rename(Week_Day = days, Rides = rides)
+      return(table_frame)
+    }
+    
+    year_table <- function(){
+      table_frame <- year_df(input$year, input$select_station)
+      table_frame <- table_frame %>%
+        rename(Week_Day = days, Rides = rides)
+      return(table_frame)
+    }
+  # Table layouts
+    # daily layout
+    output$daily_table <- renderUI({
+      div(
+        tags$style(
+          HTML('.datatables {width: inherit !important;}')
+        ),
+        datatable(
+          daily_table(),
+          options = list(
+            initComplete = JS(
+              "function(settings, json) {",
+              "$(this.api().table().header()).css({'background-color': '#000', 'color': '#fff'});",
+              "}"),
+            pageLength = 7,
+            scrollX = TRUE,
+            dom = 'tp',
+            columnDefs = list(list(className = 'dt-center', targets = "_all"))
+          ),
+          rownames = FALSE
+        ))
+    })
+      # week layout
+      output$week_table <- renderUI({
+        div(
+          tags$style(
+            HTML('.datatables {width: inherit !important;}')
+          ),
+          datatable(
+            week_table(),
+            options = list(
+              initComplete = JS(
+                "function(settings, json) {",
+                "$(this.api().table().header()).css({'background-color': '#000', 'color': '#fff'});",
+                "}"),
+              pageLength = 7,
+              scrollX = TRUE,
+              dom = 'tp',
+              columnDefs = list(list(className = 'dt-center', targets = "_all"))
+            ),
+            rownames = FALSE
+          ))
+      })
+    
+      # month layout
+      output$month_table <- renderUI({
+        div(
+          tags$style(
+            HTML('.datatables {width: inherit !important;}')
+          ),
+          datatable(
+            month_table(),
+            options = list(
+              initComplete = JS(
+                "function(settings, json) {",
+                "$(this.api().table().header()).css({'background-color': '#000', 'color': '#fff'});",
+                "}"),
+              pageLength = 7,
+              scrollX = TRUE,
+              dom = 'tp',
+              columnDefs = list(list(className = 'dt-center', targets = "_all"))
+            ),
+            rownames = FALSE
+          ))
+      })
+      
+      # year layout
+      output$year_table <- renderUI({
+        div(
+          tags$style(
+            HTML('.datatables {width: inherit !important;}')
+          ),
+          datatable(
+            year_table(),
+            options = list(
+              initComplete = JS(
+                "function(settings, json) {",
+                "$(this.api().table().header()).css({'background-color': '#000', 'color': '#fff'});",
+                "}"),
+              pageLength = 7,
+              scrollX = TRUE,
+              dom = 'tp',
+              columnDefs = list(list(className = 'dt-center', targets = "_all"))
+            ),
+            rownames = FALSE
+          ))
+      })
+  
+    # render graph and table output
+    output$plot_and_table <- renderUI({
+        fluidPage(
+          fluidRow(column(8, div(plotOutput("daily_plot"))),
+                   column(8, div(plotOutput("week_plot"))),
+                   column(8, div(plotOutput("month_plot"))),
+                   column(8, div(plotOutput("year_plot")))
+                   ),
+          fluidRow(column(8, uiOutput("daily_table")),
+                   column(8, uiOutput("week_table")),
+                   column(8, uiOutput("month_table")),
+                   column(8, uiOutput("year_table")),
+                   )
+                  )
+      })
+    
 }
 
 shinyApp(ui = ui, server = server)
