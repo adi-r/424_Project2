@@ -22,7 +22,7 @@ str(df)
 
 # UI==============================================================================================================
 ui <- dashboardPage(skin = "black",
-                    dashboardHeader(title = "Chicago 'L' Viszation"),
+                    dashboardHeader(title = "Chicago 'L' Visualization"),
                     dashboardSidebar(collapsed = FALSE, disable = FALSE,
                                      sidebarMenu(
                                        id = "menu_tabs",
