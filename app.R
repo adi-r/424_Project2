@@ -6,6 +6,7 @@
 library(lubridate)
 library(DT)
 library(ggplot2)
+library(plotly)
 library(leaflet)
 library(leaflet.extras)
 library(dplyr)
@@ -77,18 +78,15 @@ ui <- dashboardPage(skin = "black",
                                                                column(6,
                                                                       actionButton(inputId = "nextButton", label = "Next"))
                                                              ),
-                                                             div(#selectInput("station1_compare", "Station",
-                                                             #                 choices = c("All", "UIC-Halsted", "O'Hare Airport", "Racine"),
-                                                             #                 selected = c("UIC-Halsted")
-                                                               selectizeInput('select_station', "Station", choices = stations,
-                                                                               selected = "Racine", multiple = FALSE,
+                                                             div(selectizeInput('select_station', "Station", choices = stations,
+                                                                               selected = "UIC-Halsted", multiple = FALSE,
                                                                               options = NULL)
                                                              
                                                              ),
                                                              HTML("<br>"),
                                                              div(
                                                                fluidRow(
-                                                                 selectInput("sortby", "Bar Plot View", choices = c("Alphabetical" = "alphabetical", "Ascending" = 'ascending', "Descending" = "descending")),
+                                                                 selectInput("sortby", "Bar Plot View", choices = c("Alphabetical" = "alpha", "Ascending" = 'asc', "Descending" = "desc")),
                                                                )
                                                              )
                                                              )
@@ -96,7 +94,7 @@ ui <- dashboardPage(skin = "black",
                                               ),
                                               mainPanel(
                                                 fluidPage(
-                                                  splitLayout(cellWidths = c("75%", "75%"), leafletOutput("map_dash"), uiOutput("bar_table")),
+                                                  splitLayout(cellWidths = c("50%", "50%"), leafletOutput("map_dash"), uiOutput("plot_and_table")),
                                                   #Leaflet Map UI
                                                   # column(width = 12,
                                                   #        leafletOutput("map_dash"))
@@ -128,6 +126,7 @@ ui <- dashboardPage(skin = "black",
 # SERVER=======================================================================================================
 server <- function(input, output, session){
   updateSelectizeInput(session, 'select_station', choices = stations, server = TRUE)
+  
  # MAP=========================================================================================================
   # Previous day button
    observeEvent(input$prevButton,{
@@ -206,7 +205,72 @@ server <- function(input, output, session){
     
     return(map)
   })
+  
  # BARPLOT=====================================================================================================
   
+  # Dataframe for BAR TABLE
+  bar_df <- function(start_date, sort_condn, end_date=NULL){
+    date_frame <- df[df$date == start_date,][c("stationname", "rides")]
+    
+    if(sort_condn == 'alpha'){
+      date_frame <- date_frame[order(date_frame$stationname),]
+    }
+    
+    else if(sort_condn == 'asc'){
+      date_frame <- date_frame[order(date_frame$rides),]
+    }
+    
+    else{
+      date_frame <- date_frame[order(-date_frame$rides),]  
+    }
+    
+    return(date_frame)
+  }
+  
+  # Pass dataframe to table layout function
+  bar_table <- function(){
+    table_frame <- bar_df(input$date, input$sortby)
+    table_frame <- table_frame %>%
+      rename(Station = stationname, Rides = rides)
+    return(table_frame)
+  }
+  
+  # reactive table layout
+  output$bar_table <- renderUI({
+    div(
+      tags$style(
+        HTML('.datatables {width: inherit !important;}')
+      ),
+      datatable(
+        bar_table(),
+        options = list(
+          initComplete = JS(
+            "function(settings, json) {",
+            "$(this.api().table().header()).css({'background-color': '#000', 'color': '#fff'});",
+            "}"),
+          pageLength = 7,
+          scrollX = TRUE,
+          dom = 'tp',
+          columnDefs = list(list(className = 'dt-center', targets = "_all"))
+        ),
+        rownames = FALSE
+      ))
+    })
+  
+  #  reactive plotly function
+  plot_1 <- reactive({
+    data <- df[df$date == input$date,]
+    p = plot_ly(data, y = data$rides, x = data$stationname, type = "bar", text=data$line) %>%
+      layout(title = 'Ridership Data')
+    return(p)
+  })
+  
+  # Render Bar Plot and Table
+  output$plot_and_table <- renderUI({
+    fluidPage(
+      fluidRow(column(8, div(renderPlotly({plot_1()})))),
+      fluidRow(column(8, uiOutput("bar_table")))
+      )
+  })
 }
 shinyApp(ui = ui, server = server)
