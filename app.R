@@ -76,6 +76,12 @@ ui <- dashboardPage(skin = "black",
                                                                       actionButton(inputId = "prevButton", label = "Prev")),
                                                                column(6,
                                                                       actionButton(inputId = "nextButton", label = "Next"))
+                                                             ),
+                                                             HTML("<br>"),
+                                                             div(
+                                                               fluidRow(
+                                                                 selectInput("sortby", "Bar Plot View", choices = c("Alphabetical" = "alphabetical", "Ascending" = 'ascending', "Descending" = "descending")),
+                                                               )
                                                              )
                                                              )
                                                            
