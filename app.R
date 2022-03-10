@@ -32,7 +32,7 @@ df$long <- as.numeric(str_extract(df$Location, "-\\d+.\\d+"))
 
 #Storing line color as a separate column
 df$line_color <-  str_extract(df$line, "\\w+")
-
+stations <- unique(df$stationname)
 
 # UI==============================================================================================================
 ui <- dashboardPage(skin = "black",
@@ -48,7 +48,7 @@ ui <- dashboardPage(skin = "black",
                     ),
                     dashboardBody(
                       #using shinyjs to disable/enable inputs
-                      shinyjs::useShinyjs(),
+                      useShinyjs(),
                       tags$head(tags$style(".sidebar-menu li { margin-bottom: 20px; }")),
                       tabItems(
                         tabItem(tabName = "map_dash", 
@@ -77,6 +77,14 @@ ui <- dashboardPage(skin = "black",
                                                                column(6,
                                                                       actionButton(inputId = "nextButton", label = "Next"))
                                                              ),
+                                                             div(#selectInput("station1_compare", "Station",
+                                                             #                 choices = c("All", "UIC-Halsted", "O'Hare Airport", "Racine"),
+                                                             #                 selected = c("UIC-Halsted")
+                                                               selectizeInput('select_station', "Station", choices = stations,
+                                                                               selected = "Racine", multiple = FALSE,
+                                                                              options = NULL)
+                                                             
+                                                             ),
                                                              HTML("<br>"),
                                                              div(
                                                                fluidRow(
@@ -88,10 +96,10 @@ ui <- dashboardPage(skin = "black",
                                               ),
                                               mainPanel(
                                                 fluidPage(
-                                                  #splitLayout(cellWidths = c("75%", "75%"), uiOutput("compare_plots1"), uiOutput("compare_plots2"))),
+                                                  splitLayout(cellWidths = c("75%", "75%"), leafletOutput("map_dash"), uiOutput("bar_table")),
                                                   #Leaflet Map UI
-                                                  column(width = 12,
-                                                         leafletOutput("map_dash"))
+                                                  # column(width = 12,
+                                                  #        leafletOutput("map_dash"))
                                                   )
                                                 )
                         )
@@ -119,7 +127,9 @@ ui <- dashboardPage(skin = "black",
 
 # SERVER=======================================================================================================
 server <- function(input, output, session){
- # Previous day button
+  updateSelectizeInput(session, 'select_station', choices = stations, server = TRUE)
+ # MAP=========================================================================================================
+  # Previous day button
    observeEvent(input$prevButton,{
        date <- singleDateReactive() - days(1)
        #decrementing the date input and updating it
@@ -196,5 +206,7 @@ server <- function(input, output, session){
     
     return(map)
   })
+ # BARPLOT=====================================================================================================
+  
 }
 shinyApp(ui = ui, server = server)
