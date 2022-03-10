@@ -78,7 +78,8 @@ ui <- dashboardPage(skin = "black",
                                                                column(6,
                                                                       actionButton(inputId = "nextButton", label = "Next"))
                                                              ),
-                                                             div(selectizeInput('select_station', "Station", choices = stations,
+                                                             HTML("<br>"),
+                                                             div(selectizeInput('select_station', "Select Station", choices = stations,
                                                                                selected = "UIC-Halsted", multiple = FALSE,
                                                                               options = NULL)
                                                              
@@ -221,7 +222,7 @@ server <- function(input, output, session){
   
   # Dataframe for BAR TABLE
   bar_df <- function(start_date, sort_condn, end_date=NULL){
-    date_frame <- df[df$date == start_date,][c("stationname", "rides")]
+    date_frame <- df[df$date == start_date,][c("stationname", "rides", "line")]
     
     if(sort_condn == 'alpha'){
       date_frame <- date_frame[order(date_frame$stationname),]
@@ -240,7 +241,7 @@ server <- function(input, output, session){
   bar_table <- function(){
     table_frame <- bar_df(input$date, input$sortby)
     table_frame <- table_frame %>%
-      rename(Station = stationname, Rides = rides)
+      rename(Station = stationname, Rides = rides, Line = line)
     return(table_frame)
   }
   
