@@ -15,6 +15,7 @@ library(shiny)
 library(shinyjs)
 library(shinydashboard)
 library(stringr)
+library(shinyjs)
 
 options(scipen=999)
 
@@ -29,10 +30,8 @@ df$date <- as.Date(df$date, "%Y-%m-%d")
 df$lat <- as.numeric(str_extract(df$Location, "\\d+.\\d+"))
 df$long <- as.numeric(str_extract(df$Location, "-\\d+.\\d+"))
 
-# Extracting ride data for Aug 23 2021
-Aug_23_ridership$line_color <-  str_extract(Aug_23_ridership$line, "\\w+")
-
-#Extracting line color data for Aug23 df
+#Storing line color as a separate column
+df$line_color <-  str_extract(df$line, "\\w+")
 
 
 # UI==============================================================================================================
@@ -44,66 +43,50 @@ ui <- dashboardPage(skin = "black",
                                        tags$div(style = "margin-top: 300px;"),
                                        menuItem("Dashboard", tabName = "map_dash", selected = TRUE, icon = icon("dashboard")),
                                        menuItem("About", tabName = "about", icon = icon("sunglasses", lib = "glyphicon"))
+                                       
                                      )
                     ),
                     dashboardBody(
+                      #using shinyjs to disable/enable inputs
+                      shinyjs::useShinyjs(),
                       tags$head(tags$style(".sidebar-menu li { margin-bottom: 20px; }")),
                       tabItems(
                         tabItem(tabName = "map_dash", 
                                 sidebarLayout(position = "left",
-                                              sidebarPanel(style = "margin-top: 80%",
-                                                           h4("Left"),
-                                                           div(selectInput("station1_compare", "Station",
-                                                                           choices = c("All", "UIC-Halsted", "O'Hare Airport", "Racine"),
-                                                                           selected = c("UIC-Halsted")
-                                                           )
-                                                           ),
-                                                           
+                                              sidebarPanel(style = "margin-top: 70%",
+                                                           width = 3,
                                                            fluidPage(
-                                                             fluidRow(column(8,
-                                                                           radioButtons("radio_single", "Dates",
-                                                                                        c("Single Date" = "single",
-                                                                                          "Date Range" = "range"),
-                                                                                        inline = TRUE))),
-                                                             fluidRow(column(4, textInput("text", "", value = "Disable me")))
-                                                             ),
+                                                             #Radio buttons
+                                                             div(fluidRow(column(8,
+                                                                             radioButtons("radio_single", "Select mode",
+                                                                                          c("Single Date" = "single",
+                                                                                            "Comparison" = "compare"),
+                                                                                          inline = FALSE))),
+                                                             #date picker for single date
+                                                             fluidRow(
+                                                               dateInput("date", label="Single Dates", value = "2021-08-23",
+                                                                       min="2001-01-01", max="2021-11-30", format = "yyyy/mm/dd")
+                                                             )),
+                                                             #date range for comparison
+                                                             fluidRow(dateRangeInput("date1", label="Compare Dates", min = NULL,
+                                                                            max = NULL, format = "yyyy/mm/dd",
+                                                                            separator = "and")),
+                                                             fluidRow(
+                                                               column(6,
+                                                                      actionButton(inputId = "prevButton", label = "Prev")),
+                                                               column(6,
+                                                                      actionButton(inputId = "nextButton", label = "Next"))
+                                                             )
+                                                             )
                                                            
-                                                           fluidRow(column(8,
-                                                                           div(selectInput("year1_compare", "Year",
-                                                                                           choices = c("All", 2021:2001),
-                                                                                           selected = c(2021)
-                                                                           )
-                                                                           )
-                                                           )
-                                                           ),
-                                                           h4("Right"),
-                                                           div(selectInput("station2_compare", "Station",
-                                                                           choices = c("All", "UIC-Halsted", "O'Hare Airport", "Racine"),
-                                                                           selected = c("O'Hare Airport")
-                                                           )
-                                                           ),
-                                                           fluidRow(column(8,
-                                                                           div(selectInput("year2_compare", "Year",
-                                                                                           choices = c("All", 2021:2001),
-                                                                                           selected = c(2021)
-                                                                           )
-                                                                           )
-                                                           )
-                                                           ),
-                                                           width = 2
                                               ),
                                               mainPanel(
                                                 fluidPage(
                                                   #splitLayout(cellWidths = c("75%", "75%"), uiOutput("compare_plots1"), uiOutput("compare_plots2"))),
                                                   #Leaflet Map UI
-                                                  column(
-                                                    width = 12,
-                                                    leafletOutput("map_dash") 
+                                                  column(width = 12,
+                                                         leafletOutput("map_dash"))
                                                   )
-                                                  
-                                                  
-                                                  )
-                                                  
                                                 )
                         )
                       ),
@@ -129,24 +112,69 @@ ui <- dashboardPage(skin = "black",
 
 
 # SERVER=======================================================================================================
-server <- function(input, output){
+server <- function(input, output, session){
+ # Previous day button
+   observeEvent(input$prevButton,{
+       date <- singleDateReactive() - days(1)
+       #decrementing the date input and updating it
+       updateDateInput(session, "date", value = date)
+  })
+  
+  #Next day Button
+  observeEvent(input$nextButton,{
+    date <- singleDateReactive() + days(1)
+    #incrementing the date input and updating it
+    updateDateInput(session, "date", value = date)
+  })
+  
+  #Toggle single and compare date pickers
+  observeEvent(input$radio_single,{
+    if(input$radio_single == 'single'){
+      shinyjs::enable("date")
+      shinyjs::disable("date1")
+    }
+    else
+    {
+      shinyjs::enable("date1")
+      shinyjs::disable("date")
+    }
+  })
+
+  
+  
+  #Single Date reactive
+  singleDateReactive <- reactive({ 
+    if(input$radio_single == "single"){
+      singleDate <- input$date
+      return(singleDate)
+    }
+  
+    })
+  
+  #Extracting subset of datframe for a single date
+  dataframeReactive <- reactive({ 
+    singleDate <- singleDateReactive()
+    date_df <- subset(df, df$date == singleDate)})
+
+  
+  #rendering map
   output$map_dash <- renderLeaflet({
+    df <- dataframeReactive()
     map <- leaflet(options= leafletOptions()) %>%
       addTiles() %>% 
-      addCircleMarkers(data = Aug_23_ridership, lat = ~lat, lng = ~long, 
+      addCircleMarkers(data = df, lat = ~lat, lng = ~long, 
                        #Taking the log and scaling the radius
                        radius = ~log(rides+10)*1.25,
                        color = ~line_color,
-                       popup = paste("<center><strong>" ,Aug_23_ridership$stationname, "</strong>", "<br>",
-                                     Aug_23_ridership$line, "<br>",
-                                     "Rides: ", Aug_23_ridership$rides, "<br> </center>"
-                                     )
-                             
+                       popup = paste("<center><strong>" ,df$stationname, "</strong>", "<br>",
+                                     df$line, "<br>",
+                                     "Rides: ", df$rides, "<br> </center>")
+                # Tried a custom icon            
                 #,icon = list(
                 #iconUrl = 'https://icons.iconarchive.com/icons/icons8/ios7/32/Transport-Train-icon.png',
                 #iconSize = c(25, 25))
                 ) %>%
-      setView( lat = 41.8781, lng = -87.6298, zoom = 13) %>% 
+      setView( lat = 41.8781, lng = -87.6298, zoom = 12) %>% 
       #Different Backgrounds, have to select 3
       addProviderTiles("Stamen.TonerLite", group = "B/w") %>%
       addProviderTiles("OpenRailwayMap", group = "Railway") %>%

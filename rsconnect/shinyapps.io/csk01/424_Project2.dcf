@@ -5,10 +5,10 @@ account: csk01
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 5818021
-bundleId: 5663448
+bundleId: 5664592
 url: https://csk01.shinyapps.io/424_Project2/
-when: 1646858767.39206
-lastSyncTime: 1646858767.39206
+when: 1646881714.62777
+lastSyncTime: 1646881714.62777
 asMultiple: FALSE
 asStatic: FALSE
 ignoredFiles: Data/cta_data.tsv|Data/lat_long.tsv|pre-processing.R
