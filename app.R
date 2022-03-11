@@ -80,8 +80,7 @@ ui <- dashboardPage(skin = "black",
                                                              ),
                                                              HTML("<br>"),
                                                              div(selectizeInput('select_station', "Select Station", choices = stations,
-                                                                               selected = "UIC-Halsted", multiple = FALSE,
-                                                                              options = NULL)
+                                                                               selected = "UIC-Halsted")
                                                              
                                                              ),
                                                              HTML("<br>"),
@@ -103,8 +102,26 @@ ui <- dashboardPage(skin = "black",
                                               ),
                                               
                                               mainPanel(
-                                                fluidPage(
-                                                  splitLayout(cellWidths = c("50%", "80%", "80%"), leafletOutput("map_dash"), uiOutput("bar_graph"), uiOutput("plot_and_table")),
+                                                # fluidRow(
+                                                #   column(12,
+                                                #          leafletOutput("map_dash")),
+                                                #   column(12,
+                                                #          uiOutput("bar_graph"),),
+                                                #   column(12,
+                                                #          uiOutput("plot_and_table"))
+                                                # )
+                                                # leafletOutput("map_dash"),
+                                                # uiOutput("bar_graph"),
+                                                # uiOutput("plot_and_table")
+                                                 fluidPage(
+                                                  #splitLayout(cellWidths = c("100%", "100%", "400%"), leafletOutput("map_dash"), uiOutput("bar_graph"), uiOutput("plot_and_table")),
+                                                  splitLayout(
+                                                    cellWidths = 1000,
+                                                    cellArgs = list(style = "padding: 6px"),
+                                                    leafletOutput("map_dash"),
+                                                    uiOutput("bar_graph"),
+                                                    uiOutput("plot_and_table")
+                                                  )
                                                   #Leaflet Map UI
                                                   # column(width = 12,
                                                   #        leafletOutput("map_dash"))
@@ -135,7 +152,8 @@ ui <- dashboardPage(skin = "black",
 
 # SERVER=======================================================================================================
 server <- function(input, output, session){
-  updateSelectizeInput(session, 'select_station', choices = stations, server = TRUE)
+  # updateSelectizeInput(session, 'select_station', choices = stations, server = TRUE)
+  #input$select_station = 'UIC-Halsted'
   
   # MAP=========================================================================================================
   # Previous day button
@@ -298,24 +316,22 @@ server <- function(input, output, session){
   
   # GRAPHS AND TABLES===================================================================================================== 
     
-  # Sum functions
+  # Sum functions============================================
   week_sigma <- function(day, year, station){
     if(year == "All"){
       if(station == "All"){
         sum(df[df$week_day == day,]$rides)
       } else{
-        sum(df[df$week_day == day,]$rides)
+        data <- df[df$stationname == station,]
+        sum(data[data$week_day == day,]$rides)
       }
     }
     else{
       if(station == "All"){
         sum(df[df$year == year & df$week_day == day,]$rides)
-      } else if(station == "UIC-Halsted"){
-        sum(uic_df[uic_df$year == year & uic_df$week_day == day,]$rides)
-      } else if(station == "O'Hare Airport"){
-        sum(ohare_df[ohare_df$year == year & ohare_df$week_day == day,]$ rides)
       } else{
-        sum(racine_df[racine_df$year == year & racine_df$week_day == day,]$rides)
+        data <- df[df$stationname == station,]
+        sum(data[data$year == year & data$week_day == day,]$rides)
       }
     }
   }
@@ -324,23 +340,48 @@ server <- function(input, output, session){
     if(year == "All"){
       if(station == "All"){
         sum(df[df$month_name == month,]$rides)
-      } else if(station == "UIC-Halsted"){
-        sum(uic_df[uic_df$month_name == month,]$rides)
-      } else if(station == "O'Hare Airport"){
-        sum(ohare_df[ohare_df$month_name == month,]$ rides)
       } else{
-        sum(racine_df[racine_df$month_name == month,]$rides)
+        data <- df[df$stationname == station,]
+        sum(data[data$month_name == month,]$rides)
       }
     }
     else{
       if(station == "All"){
         sum(df[df$year == year & df$month_name == month,]$rides)
-      } else if(station == "UIC-Halsted"){
-        sum(uic_df[uic_df$year == year & uic_df$month_name == month,]$rides)
-      } else if(station == "O'Hare Airport"){
-        sum(ohare_df[ohare_df$year == year & ohare_df$month_name == month,]$ rides)
       } else{
-        sum(racine_df[racine_df$year == year & racine_df$month_name == month,]$rides)
+        data <- df[df$stationname == station,]
+        sum(data[data$year == year & data$month_name == month,]$rides)
+      }
+    }
+  }
+  
+  year_sigma <- function(year, station){
+    data <- df[df$stationname == station,]
+    sum(data[data$year == year,]$rides)
+  }
+  
+  daily_df <- function(year, station){
+    if(year == "All"){
+      if(station == "All"){
+        date_frame <- df[c("date", "rides")]
+        return(date_frame)
+      }
+      else{
+        data <- df[df$stationname == station,]
+        data <- data[c("date", "rides")]
+        return(data)
+      }
+    } 
+    else{
+      if(station == "All"){
+        data <- df[df$year == year,]
+        data <- data[c("date", "rides")]
+        return(data)
+      } 
+      else{
+        data <- df[df$stationname == station & df$year == year,]
+        data <- data[c("date", "rides")]
+        return(data) 
       }
     }
   }
@@ -359,12 +400,19 @@ server <- function(input, output, session){
     return(month_frame)
   }
   
+  year_df <- function(station){
+    year <- c(2021:2001)
+    rides <-  sapply(c(2021:2001), function(year) year_sigma(year, station))
+    year_frame <- data.frame(year,rides)
+    return (year_frame)
+  }
   
-  # Pass dataframe to layout function
+  
+  # Pass dataframe to layout function=================================================================
     daily_table <- function(){
       table_frame <- daily_df(input$year, input$select_station)
       table_frame <- table_frame %>%
-        rename(Week_Day = days, Rides = rides)
+        rename(Date = date, Rides = rides)
       return(table_frame)
     }
     
@@ -378,14 +426,14 @@ server <- function(input, output, session){
     month_table <- function(){
       table_frame <- month_df(input$year, input$select_station)
       table_frame <- table_frame %>%
-        rename(Week_Day = days, Rides = rides)
+        rename(Month = month, Rides = rides)
       return(table_frame)
     }
     
     year_table <- function(){
-      table_frame <- year_df(input$year, input$select_station)
+      table_frame <- year_df(input$select_station)
       table_frame <- table_frame %>%
-        rename(Week_Day = days, Rides = rides)
+        rename(Year = year, Rides = rides)
       return(table_frame)
     }
   # Table layouts
@@ -476,21 +524,48 @@ server <- function(input, output, session){
           ))
       })
   
+    # GRAPHS========================================
+      output$daily_plot <- renderPlot({
+        ggplot(data = daily_df(input$year, input$select_station), aes(x = date, y = rides)) +
+          geom_bar(stat = "identity", aes(fill = rides)) +
+          labs(x = "Date", y ="Rides", title = "Daily Entries") + scale_y_continuous(labels = comma)
+      })
+      
+      output$week_plot <- renderPlot({
+        ggplot(data = week_df(input$year, input$select_station), aes(x = factor(days, c("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")), y = rides)) +
+          geom_bar(stat = "identity", aes(fill = rides)) +
+          labs(x = "Week Day", y ="Rides", title = "Weekly entries") + scale_y_continuous(labels = comma)
+      })
+      
+      output$month_plot <- renderPlot({
+        ggplot(data = month_df(input$year, input$select_station), aes(x = factor(month, level = c("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")), y = rides)) +
+          geom_bar(stat = "identity", aes(fill = rides)) +
+          labs(x = "Month", y ="Rides", title = "Monthly entries") + scale_y_continuous(labels = comma)
+      })
+      
+      output$year_plot <- renderPlot({
+        ggplot(data = year_df(input$select_station), aes(x = year, y = rides)) +
+          geom_bar(stat = "identity", aes(fill = rides)) +
+          labs(x = "Year", y ="Rides", title = "Yearly entries") + scale_y_continuous(labels = comma)
+      })
+      
     # render graph and table output
     output$plot_and_table <- renderUI({
         fluidPage(
-          fluidRow(column(8, div(plotOutput("daily_plot"))),
-                   column(8, div(plotOutput("week_plot"))),
-                   column(8, div(plotOutput("month_plot"))),
-                   column(8, div(plotOutput("year_plot")))
+          fluidRow(column(12, div(plotOutput("daily_plot"))),
+                   column(12, div(plotOutput("week_plot"))),
+                   column(12, div(plotOutput("month_plot"))),
+                   column(12, div(plotOutput("year_plot")))
                    ),
-          fluidRow(column(8, uiOutput("daily_table")),
-                   column(8, uiOutput("week_table")),
-                   column(8, uiOutput("month_table")),
-                   column(8, uiOutput("year_table")),
+          fluidRow(column(12, uiOutput("daily_table")),
+                   column(12, uiOutput("week_table")),
+                   column(12, uiOutput("month_table")),
+                   column(12, uiOutput("year_table")),
                    )
                   )
       })
+    
+    
     
 }
 
