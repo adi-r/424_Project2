@@ -50,11 +50,6 @@ map <- leaflet(options= leafletOptions(preferCanvas = T)) %>%
     position = "bottomright"
   )
 
-# a list of colors
-#for multi-color palette for divergent map
-#myColors <- c("#488f31", "#bebc84", "#f8f6f4", "#e7a487", "#d43d51")
-#pal <- colorNumeric(palette=myColors, domain=cat1[-c(1)])
-
 # UI==============================================================================================================
 ui <- dashboardPage(skin = "black",
                     dashboardHeader(title = "CS424 Project-2"),
@@ -311,7 +306,7 @@ server <- function(input, output, session){
       diff_df = dataframeReactive()
       
       #changing line color acc to + or - ridership change
-      diff_df <- transform(diff_df, line_color = ifelse(diff_df$rides <= 0, "red", "green"))
+      diff_df <- transform(diff_df, line_color = ifelse(diff_df$rides < 0, "#ef8a62", "#67a9cf"))
       print(head(diff_df))
       #Transforming all ride change as +
       #difference_df$rides <- abs(difference_df$rides)
@@ -329,9 +324,8 @@ server <- function(input, output, session){
                                       "Change in Ridership: ", df$rides, "<br> </center>")
                          ) %>%
         addLegend(position = "bottomleft",
-                  colors = c('green', 'red'),
-                  labels = c('More','Less'),
-                  opacity = 0.8
+                  colors = c("#ef8a62", "#67a9cf"),
+                  labels = c('Less','More')
           
         )
     }
