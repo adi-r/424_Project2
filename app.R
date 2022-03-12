@@ -69,7 +69,7 @@ ui <- dashboardPage(skin = "black",
                                                                        min="2001-01-01", max="2021-11-30", format = "yyyy/mm/dd")
                                                              )),
                                                              #date range for comparison
-                                                             fluidRow(dateRangeInput("date1", label="Compare Dates", start = "2021-08-23", end = "2001-08-23",  min="2001-01-01", max="2021-11-30", format = "yyyy/mm/dd",
+                                                             fluidRow(dateRangeInput("date1", label="Compare Dates", start = "2001-08-23", end = "2021-08-23",  min="2001-01-01", max="2021-11-30", format = "yyyy/mm/dd",
                                                                             separator = "and")),
                                                              fluidRow(
                                                                column(6,
