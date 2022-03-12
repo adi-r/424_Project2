@@ -35,6 +35,26 @@ df$long <- as.numeric(str_extract(df$Location, "-\\d+.\\d+"))
 df$line_color <-  str_extract(df$line, "\\w+")
 stations <- unique(df$stationname)
 
+#setting initial leaflet map  
+map <- leaflet(options= leafletOptions(preferCanvas = T)) %>%
+  addTiles() %>% 
+  addProviderTiles("OpenStreetMap.Mapnik", group = "Default") %>%
+  addProviderTiles("OpenRailwayMap", group = "CTA Lines") %>%
+  addProviderTiles("CartoDB.Positron", group = "Minimal") %>%
+  #Resettable map
+  addResetMapButton() %>%
+  #Choice for background
+  addLayersControl(
+    baseGroups = c("Default", "CTA Lines", "Minimal"),
+    options = layersControlOptions(collapsed = FALSE),
+    position = "bottomright"
+  )
+
+# a list of colors
+#for multi-color palette for divergent map
+#myColors <- c("#488f31", "#bebc84", "#f8f6f4", "#e7a487", "#d43d51")
+#pal <- colorNumeric(palette=myColors, domain=cat1[-c(1)])
+
 # UI==============================================================================================================
 ui <- dashboardPage(skin = "black",
                     dashboardHeader(title = "CS424 Project-2"),
@@ -69,7 +89,7 @@ ui <- dashboardPage(skin = "black",
                                                                        min="2001-01-01", max="2021-11-30", format = "yyyy/mm/dd")
                                                              )),
                                                              #date range for comparison
-                                                             fluidRow(dateRangeInput("date1", label="Compare Dates", start = "2001-08-23", end = "2021-08-23",  min="2001-01-01", max="2021-11-30", format = "yyyy/mm/dd",
+                                                             fluidRow(dateRangeInput("date1", label="Compare Dates", start = "2021-08-23", end = "2001-08-23",  min="2001-01-01", max="2021-11-30", format = "yyyy/mm/dd",
                                                                             separator = "and")),
                                                              fluidRow(
                                                                column(6,
@@ -198,34 +218,29 @@ server <- function(input, output, session){
       date_df_2 <- subset(df, df$date == date2)
       
       difference_df <- inner_join(x=date_df_1, y=date_df_2, by="station_id")
-      difference_df <- subset(difference_df, select = c("station_id", "stationname.x", "date.x", "lat.x", "long.x", "rides.x","rides.y", "line.x", "line_color.x")) 
+      difference_df <- subset(difference_df, select = c("station_id", "stationname.x", "date.x", "date.y", "lat.x", "long.x", "rides.x","rides.y", "line.x", "line_color.x")) 
       difference_df$rides <- difference_df$rides.x - difference_df$rides.y
-      difference_df <- rename( difference_df, c(
-                               
-        stationname = stationname.x,
-        date = date.x,
-        lat = lat.x,
-        long = long.x,
-        line = line.x,
-        line_color = line_color.x
-        )
-      )
+      
+      difference_df <- difference_df %>%
+        rename( stationname = stationname.x,
+                date_1 = date.x,
+                date_2 = date.y,
+                line = line.x,
+                lat = lat.x,
+                long = long.x,
+                line_color = line_color.x)
+      
+      
+      difference_df %>%
+        mutate(sign = case_when(
+          rides < 0 ~ "Negative",
+          rides > -1 ~ "Positive"
+        ))
       
       return(difference_df)
   })
   
-  #Extracting subset of datframe for single date and compare dates
-  dataframeReactive <- reactive({ 
-    if(input$radio_single == "single"){
-      singleDate <- singleDateReactive()
-      date_df <- subset(df, df$date == singleDate)
-    }
-    else{
-      
-      diff_df = multiDateReactive()
-      print(head(diff_df))
-    }
-      })
+  
   
   #Change select based on map and vice-versa
   observeEvent(input$map_dash_marker_click,{
@@ -265,66 +280,87 @@ server <- function(input, output, session){
   
   #rendering map
   output$map_dash <- renderLeaflet({
-    df <- dataframeReactive()
-    map <- leaflet(options= leafletOptions()) %>%
-      addTiles() %>% 
-      addCircleMarkers(data = df, lat = ~lat, lng = ~long, 
-                       #Taking the log and scaling the radius
-                       radius = ~log(rides+10)*1.25,
-                       color = ~line_color,
-                       layerId = ~stationname,
-                       popup = paste("<center><strong>" ,df$stationname, "</strong>", "<br>",
-                                     df$line, "<br>",
-                                     "Rides: ", df$rides, "<br> </center>")
-                # Tried a custom icon            
-                #,icon = list(
-                #iconUrl = 'https://icons.iconarchive.com/icons/icons8/ios7/32/Transport-Train-icon.png',
-                #iconSize = c(25, 25))
-                ) %>%
-      setView( lat = 41.8781, lng = -87.6298, zoom = 12) %>% 
-      #Different Backgrounds, have to select 3
-      addProviderTiles("Stamen.TonerLite", group = "B/w") %>%
-      addProviderTiles("OpenRailwayMap", group = "Railway") %>%
-      addProviderTiles("OpenStreetMap.Mapnik", group = "smooth") %>%
-      addProviderTiles("CartoDB.Positron", group = "Minimalist") %>%
-      #Resettable map
-      addResetMapButton() %>%
-      #Choice for background
-      addLayersControl(
-        baseGroups = c("B/w", "Railway", "smooth", "Minimalist"),
-        options = layersControlOptions(collapsed = FALSE)
-      )
     
-    return(map)
+    #for single date
+    if(input$radio_single == 'single'){
+      df <- dataframeReactive()
+      
+      #adding markers for single date to map
+      map <- map %>% 
+        clearPopups() %>%
+        clearMarkers() %>%
+        addCircleMarkers(
+        data = df, lat = ~lat, lng = ~long, 
+        
+        #Taking the log and scaling the radius
+        radius = ~log(rides+10)*1.25,
+        color = ~line_color,
+        layerId = ~stationname,
+        popup = paste("<center><strong>" ,df$stationname, "</strong>", "<br>",
+                      df$line, "<br>",
+                      "Rides: ", df$rides, "<br> </center>"
+                      )
+        )
+    }
+    
+    # adding markers for date comparison on map
+    else{
+      
+      #Adding divergent markers for comparison
+      
+      diff_df = dataframeReactive()
+      
+      #changing line color acc to + or - ridership change
+      diff_df <- transform(diff_df, line_color = ifelse(diff_df$rides <= 0, "red", "green"))
+      print(head(diff_df))
+      #Transforming all ride change as +
+      #difference_df$rides <- abs(difference_df$rides)
+      map <- map %>%
+        clearPopups() %>%
+        clearMarkers() %>%
+        addCircleMarkers(data = diff_df,
+                         lat = ~lat, lng = ~long, 
+                         #Taking the log and scaling the radius
+                         radius = ~log(abs(rides)+10)*1.5,
+                         color = ~line_color,
+                         layerId = ~stationname,
+                         popup = paste("<center><strong>" ,df$stationname, "</strong>", "<br>",
+                                       df$line, "<br>",
+                                      "Change in Ridership: ", df$rides, "<br> </center>")
+                         ) %>%
+        addLegend(position = "bottomleft",
+                  colors = c('green', 'red'),
+                  labels = c('More','Less'),
+                  opacity = 0.8
+          
+        )
+    }
+    return(map)  
   })
   
- 
+  #Extracting subset of datframe for single date and compare dates
+  dataframeReactive <- reactive({ 
+    if(input$radio_single == "single"){
+      singleDate <- singleDateReactive()
+      date_df <- subset(df, df$date == singleDate)
+    }
+    else{
+      
+      diff_df = multiDateReactive()
+      return(diff_df)
+    }
+  })
  
   # BARPLOT=====================================================================================================
   
-  # Dataframe for BAR TABLE
-  bar_df <- function(start_date, sort_condn, end_date=NULL){
-    date_frame <- df[df$date == start_date,][c("stationname", "rides", "line")]
-    
-    if(sort_condn == 'alpha'){
-      date_frame <- date_frame[order(date_frame$stationname),]
-    }
-    else if(sort_condn == 'asc'){
-      date_frame <- date_frame[order(date_frame$rides),]
-    }
-    else{
-      date_frame <- date_frame[order(-date_frame$rides),]  
-    }
-    
-    return(date_frame)
-  }
-  
   # Pass dataframe to table layout function
   bar_table <- function(){
-    table_frame <- bar_df(input$date, input$sortby)
-    table_frame <- table_frame %>%
-      rename(Station = stationname, Rides = rides, Line = line)
-    return(table_frame)
+      table_frame <-dataframeReactive()
+      table_frame <- table_frame[c("stationname", "line", "rides")]
+      table_frame <- table_frame %>%
+        rename(Station = stationname, Rides = rides, Line = line)
+      return(table_frame)
+    
   }
   
   # reactive table layout
@@ -351,24 +387,53 @@ server <- function(input, output, session){
   
   #  reactive plotly function
   plot_1 <- reactive({
-    data <- df[df$date == input$date,]
-    if(input$sortby == 'alpha'){
-      data <- data[order(data$stationname),]
-    }
-    else if(input$sortby == 'asc'){
-      data <- data[order(data$rides),]
-    }
-    else{
-      data <- data[order(-data$rides),]  
+    
+    
+    if(input$radio_single == 'single'){
+      data <- dataframeReactive()
+      if(input$sortby == 'alpha'){
+        data <- data[order(data$stationname),]
+      }
+      else if(input$sortby == 'asc'){
+        data <- data[order(data$rides),]
+      }
+      else{
+        data <- data[order(-data$rides),]  
+      }
+      
+      yform <- list(categoryorder = "array",
+                    categoryarray = rev(data$stationname)
+      )
+      p = plot_ly(data, y = ~stationname, x = ~rides, type = "bar", text=~line) %>%
+        layout(title = 'Ridership Data', yaxis = yform)
+      return(p)  
     }
     
-    yform <- list(categoryorder = "array",
-                  categoryarray = rev(data$stationname)
-                    )
-    p = plot_ly(data, y = data$stationname, x = data$rides, type = "bar", text=data$line) %>%
-      layout(title = 'Ridership Data', yaxis = yform)
-    return(p)
-  })
+    else{
+      data <- dataframeReactive()
+      if(input$sortby == 'alpha'){
+        data <- data[order(data$stationname),]
+      }
+      else if(input$sortby == 'asc'){
+        data <- data[order(data$rides),]
+      }
+      else{
+        data <- data[order(-data$rides),]  
+      }
+      
+      
+      fig <- ggplot(data = data,
+                    aes(x = stationname, y = rides))+
+        geom_bar(stat = "identity", aes(fill=rides>0))+ 
+        labs(x = "Ride Difference", y = "Stations") + scale_fill_discrete(name = "Ridership Change") +
+        coord_flip()
+      
+    }
+      return(fig)
+    
+  
+    
+    })
   
   # Render Bar Plot and Table
   output$bar_graph <- renderUI({
@@ -615,18 +680,54 @@ server <- function(input, output, session){
       
     # render graph and table output
     output$plot_and_table <- renderUI({
-        fluidPage(
-          fluidRow(column(12, div(plotOutput("daily_plot"))),
-                   column(12, div(plotOutput("week_plot"))),
-                   column(12, div(plotOutput("month_plot"))),
-                   column(12, div(plotOutput("year_plot")))
+        # fluidPage(
+        #   fluidRow(column(12, div(plotOutput("daily_plot"))),
+        #            column(12, div(plotOutput("week_plot"))),
+        #            column(12, div(plotOutput("month_plot"))),
+        #            column(12, div(plotOutput("year_plot")))
+        #            ),
+        #   fluidRow(column(12, uiOutput("daily_table")),
+        #            column(12, uiOutput("week_table")),
+        #            column(12, uiOutput("month_table")),
+        #            column(12, uiOutput("year_table")),
+        #            )
+        #           )
+      
+          fluidRow(
+            column(4, 
+                   fluidPage(
+                     fluidRow(
+                       column(4, div(plotOutput("daily_plot"))),
+                       column(4, uiOutput("daily_table"))
+                       )
+                     )
                    ),
-          fluidRow(column(12, uiOutput("daily_table")),
-                   column(12, uiOutput("week_table")),
-                   column(12, uiOutput("month_table")),
-                   column(12, uiOutput("year_table")),
+            column(4, 
+                   fluidPage(
+                     fluidRow(
+                       column(4, div(plotOutput("week_plot"))),
+                       column(4, uiOutput("week_table"))
+                     )
                    )
-                  )
+            ),
+            column(4, 
+                   fluidPage(
+                     fluidRow(
+                       column(4, div(plotOutput("month_plot"))),
+                       column(4, uiOutput("month_table"))
+                     )
+                   )
+            ),
+            column(4, 
+                   fluidPage(
+                     fluidRow(
+                       column(4, div(plotOutput("year_plot"))),
+                       column(4, uiOutput("year_table"))
+                     )
+                   )
+            )
+            )
+          
       })
     
     
