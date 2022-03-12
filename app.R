@@ -69,8 +69,7 @@ ui <- dashboardPage(skin = "black",
                                                                        min="2001-01-01", max="2021-11-30", format = "yyyy/mm/dd")
                                                              )),
                                                              #date range for comparison
-                                                             fluidRow(dateRangeInput("date1", label="Compare Dates", min = NULL,
-                                                                            max = NULL, format = "yyyy/mm/dd",
+                                                             fluidRow(dateRangeInput("date1", label="Compare Dates", start = "2021-08-23", end = "2001-08-23",  min="2001-01-01", max="2021-11-30", format = "yyyy/mm/dd",
                                                                             separator = "and")),
                                                              fluidRow(
                                                                column(6,
@@ -187,18 +186,82 @@ server <- function(input, output, session){
   
   #Single Date reactive
   singleDateReactive <- reactive({ 
-    if(input$radio_single == "single"){
       singleDate <- input$date
       return(singleDate)
-    }
+      })
   
+  #Multi date reactive returns difference df with station
+  multiDateReactive <- reactive({
+      date1 <- input$date1[1]
+      date2 <- input$date1[2]
+      date_df_1 <- subset(df, df$date == date1)
+      date_df_2 <- subset(df, df$date == date2)
+      
+      difference_df <- inner_join(x=date_df_1, y=date_df_2, by="station_id")
+      difference_df <- subset(difference_df, select = c("station_id", "stationname.x", "date.x", "lat.x", "long.x", "rides.x","rides.y", "line.x", "line_color.x")) 
+      difference_df$rides <- difference_df$rides.x - difference_df$rides.y
+      difference_df <- rename( difference_df, c(
+                               
+        stationname = stationname.x,
+        date = date.x,
+        lat = lat.x,
+        long = long.x,
+        line = line.x,
+        line_color = line_color.x
+        )
+      )
+      
+      return(difference_df)
+  })
+  
+  #Extracting subset of datframe for single date and compare dates
+  dataframeReactive <- reactive({ 
+    if(input$radio_single == "single"){
+      singleDate <- singleDateReactive()
+      date_df <- subset(df, df$date == singleDate)
+    }
+    else{
+      
+      diff_df = multiDateReactive()
+      print(head(diff_df))
+    }
+      })
+  
+  #Change select based on map and vice-versa
+  observeEvent(input$map_dash_marker_click,{
+    print("map click event")
+    #updating select-input based on map
+    click <- input$map_dash_marker_click
+    station <- click$id
+    leafletProxy("map_dash", session) %>%
+      clearPopups() %>% clearControls()
+    updateSelectInput(session, "select_station", 
+                      selected = click$id)
+  })
+  
+  observeEvent(input$select_station,{
+    print('select station event')
+    stationReactive()
     })
   
-  #Extracting subset of datframe for a single date
-  dataframeReactive <- reactive({ 
-    singleDate <- singleDateReactive()
-    date_df <- subset(df, df$date == singleDate)})
+  stationReactive <- reactive({
+  print('station reactive')
+    
+  station_name <- input$select_station
+  df <- dataframeReactive()
+  temp <- subset(df, df$stationname == station_name )
+  popup_temp = paste("<center><strong>" ,temp$stationname, "</strong>", "<br>",
+                     temp$line, "<br>",
+                     "Rides: ", temp$rides, "<br> </center>")
+  #Updating the map
+  leafletProxy("map_dash", session) %>%
+    clearPopups() %>%
+    #setView( lat = temp$lat, lng = temp$long, zoom = 10)  %>%
+    addPopups( lat = temp$lat, lng = temp$long, popup_temp)
+  })
+  
 
+  
   
   #rendering map
   output$map_dash <- renderLeaflet({
@@ -209,6 +272,7 @@ server <- function(input, output, session){
                        #Taking the log and scaling the radius
                        radius = ~log(rides+10)*1.25,
                        color = ~line_color,
+                       layerId = ~stationname,
                        popup = paste("<center><strong>" ,df$stationname, "</strong>", "<br>",
                                      df$line, "<br>",
                                      "Rides: ", df$rides, "<br> </center>")
