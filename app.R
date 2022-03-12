@@ -551,18 +551,54 @@ server <- function(input, output, session){
       
     # render graph and table output
     output$plot_and_table <- renderUI({
-        fluidPage(
-          fluidRow(column(12, div(plotOutput("daily_plot"))),
-                   column(12, div(plotOutput("week_plot"))),
-                   column(12, div(plotOutput("month_plot"))),
-                   column(12, div(plotOutput("year_plot")))
+        # fluidPage(
+        #   fluidRow(column(12, div(plotOutput("daily_plot"))),
+        #            column(12, div(plotOutput("week_plot"))),
+        #            column(12, div(plotOutput("month_plot"))),
+        #            column(12, div(plotOutput("year_plot")))
+        #            ),
+        #   fluidRow(column(12, uiOutput("daily_table")),
+        #            column(12, uiOutput("week_table")),
+        #            column(12, uiOutput("month_table")),
+        #            column(12, uiOutput("year_table")),
+        #            )
+        #           )
+      
+          fluidRow(
+            column(4, 
+                   fluidPage(
+                     fluidRow(
+                       column(4, div(plotOutput("daily_plot"))),
+                       column(4, uiOutput("daily_table"))
+                       )
+                     )
                    ),
-          fluidRow(column(12, uiOutput("daily_table")),
-                   column(12, uiOutput("week_table")),
-                   column(12, uiOutput("month_table")),
-                   column(12, uiOutput("year_table")),
+            column(4, 
+                   fluidPage(
+                     fluidRow(
+                       column(4, div(plotOutput("week_plot"))),
+                       column(4, uiOutput("week_table"))
+                     )
                    )
-                  )
+            ),
+            column(4, 
+                   fluidPage(
+                     fluidRow(
+                       column(4, div(plotOutput("month_plot"))),
+                       column(4, uiOutput("month_table"))
+                     )
+                   )
+            ),
+            column(4, 
+                   fluidPage(
+                     fluidRow(
+                       column(4, div(plotOutput("year_plot"))),
+                       column(4, uiOutput("year_table"))
+                     )
+                   )
+            )
+            )
+          
       })
     
     

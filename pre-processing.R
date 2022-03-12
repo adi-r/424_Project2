@@ -90,10 +90,14 @@ final_data$line[final_data$stationname == 'Washington/State'] = "Red Line"
 final_data$Location[final_data$stationname == 'Homan'] = "(41.884914, -87.711327)"
 final_data$line[final_data$stationname == 'Homan'] = "Green Line"
 
+# Change data regarding Pink Line
+final_data$line[final_data$stationname == "54th/Cermak" & final_data$date < "2006-06-25"] <- "Blue Line"
+
 # Check for NULL
 ok <- complete.cases(final_data)
 dim(final_data[ok, ]) == dim(final_data)
 
+str(final_data)
 # write.table(final_data, file='final_data.tsv', quote=FALSE, sep='\t')
 
 # Export data
