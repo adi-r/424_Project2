@@ -198,34 +198,30 @@ server <- function(input, output, session){
       date_df_2 <- subset(df, df$date == date2)
       
       difference_df <- inner_join(x=date_df_1, y=date_df_2, by="station_id")
-      difference_df <- subset(difference_df, select = c("station_id", "stationname.x", "date.x", "lat.x", "long.x", "rides.x","rides.y", "line.x", "line_color.x")) 
+      difference_df <- subset(difference_df, select = c("station_id", "stationname.x", "date.x", "date.y", "lat.x", "long.x", "rides.x","rides.y", "line.x", "line_color.x")) 
       difference_df$rides <- difference_df$rides.x - difference_df$rides.y
-      difference_df <- rename( difference_df, c(
-                               
-        stationname = stationname.x,
-        date = date.x,
-        lat = lat.x,
-        long = long.x,
-        line = line.x,
-        line_color = line_color.x
-        )
-      )
       
+      difference_df <- difference_df %>%
+        rename( stationname = stationname.x,
+                date_1 = date.x,
+                date_2 = date.y,
+                line = line.x,
+                lat = lat.x,
+                long = long.x,
+                line_color = line_color.x)
+      
+      
+      difference_df %>%
+        mutate(sign = case_when(
+          rides < 0 ~ "Negative",
+          rides > -1 ~ "Positive"
+        ))
+      
+      print(difference_df)
       return(difference_df)
   })
   
-  #Extracting subset of datframe for single date and compare dates
-  dataframeReactive <- reactive({ 
-    if(input$radio_single == "single"){
-      singleDate <- singleDateReactive()
-      date_df <- subset(df, df$date == singleDate)
-    }
-    else{
-      
-      diff_df = multiDateReactive()
-      print(head(diff_df))
-    }
-      })
+  
   
   #Change select based on map and vice-versa
   observeEvent(input$map_dash_marker_click,{
@@ -298,33 +294,29 @@ server <- function(input, output, session){
     return(map)
   })
   
- 
+  #Extracting subset of datframe for single date and compare dates
+  dataframeReactive <- reactive({ 
+    if(input$radio_single == "single"){
+      singleDate <- singleDateReactive()
+      date_df <- subset(df, df$date == singleDate)
+    }
+    else{
+      
+      diff_df = multiDateReactive()
+      print(head(diff_df))
+    }
+  })
  
   # BARPLOT=====================================================================================================
   
-  # Dataframe for BAR TABLE
-  bar_df <- function(start_date, sort_condn, end_date=NULL){
-    date_frame <- df[df$date == start_date,][c("stationname", "rides", "line")]
-    
-    if(sort_condn == 'alpha'){
-      date_frame <- date_frame[order(date_frame$stationname),]
-    }
-    else if(sort_condn == 'asc'){
-      date_frame <- date_frame[order(date_frame$rides),]
-    }
-    else{
-      date_frame <- date_frame[order(-date_frame$rides),]  
-    }
-    
-    return(date_frame)
-  }
-  
   # Pass dataframe to table layout function
   bar_table <- function(){
-    table_frame <- bar_df(input$date, input$sortby)
-    table_frame <- table_frame %>%
-      rename(Station = stationname, Rides = rides, Line = line)
-    return(table_frame)
+      table_frame <-dataframeReactive()
+      table_frame <- table_frame[c("stationname", "line", "rides")]
+      table_frame <- table_frame %>%
+        rename(Station = stationname, Rides = rides, Line = line)
+      return(table_frame)
+    
   }
   
   # reactive table layout
@@ -351,24 +343,78 @@ server <- function(input, output, session){
   
   #  reactive plotly function
   plot_1 <- reactive({
-    data <- df[df$date == input$date,]
-    if(input$sortby == 'alpha'){
-      data <- data[order(data$stationname),]
-    }
-    else if(input$sortby == 'asc'){
-      data <- data[order(data$rides),]
-    }
-    else{
-      data <- data[order(-data$rides),]  
+    data <- dataframeReactive()
+    
+    if(input$radio_single == 'single'){
+      if(input$sortby == 'alpha'){
+        data <- data[order(data$stationname),]
+      }
+      else if(input$sortby == 'asc'){
+        data <- data[order(data$rides),]
+      }
+      else{
+        data <- data[order(-data$rides),]  
+      }
+      
+      yform <- list(categoryorder = "array",
+                    categoryarray = rev(data$stationname)
+      )
+      p = plot_ly(data, y = data$stationname, x = data$rides, type = "bar", text=data$line) %>%
+        layout(title = 'Ridership Data', yaxis = yform)
+      return(p)  
     }
     
-    yform <- list(categoryorder = "array",
-                  categoryarray = rev(data$stationname)
-                    )
-    p = plot_ly(data, y = data$stationname, x = data$rides, type = "bar", text=data$line) %>%
-      layout(title = 'Ridership Data', yaxis = yform)
-    return(p)
-  })
+    else{
+      if(input$sortby == 'alpha'){
+        data <- data[order(data$stationname),]
+      }
+      else if(input$sortby == 'asc'){
+        data <- data[order(data$rides),]
+      }
+      else{
+        data <- data[order(-data$rides),]  
+      }
+      
+      yform <- list(categoryorder = "array",
+                    categoryarray = rev(data$stationname)
+      )
+      
+      
+      data %>%
+        mutate(sign = case_when(
+          rides < 0 ~ "negative",
+          rides == 0 ~ "zero",
+          rides > 0 ~ "positive"
+        ))
+      
+        # data$year_string <- as.character(data$year)
+        # data$year_string <- factor(data$year_string, levels = data$year_string)
+        # 
+        # 
+        # fig <- ggplot(data, aes(x=year_string, y=rides, label=rides)) +
+        #   + geom_bar(stat='identity', aes(fill=sign), width=.5) +
+        #    + scale_fill_manual(name="Ridership Change",
+        #                        +    labels = c("Negative", "Postive"),
+        #                        +    values = c("negative"="#00ba38", "postive"="#f8766d")) +
+        #   + labs(subtitle="Change in Ridership count as dates are compared",
+        #          +    title= "Diverging Bars") +
+        #   + coord_flip()
+      
+      
+      # fig <- ggplot(data = data,
+      #               aes(x = reorder(stationname, rides), y = rides, fill=rides>0))+
+      #   geom_bar(stat = "identity")+
+      #   coord_flip()
+      fig <- ggplot(data = data,
+                    aes(x = stationname, y = rides))+
+        geom_bar(stat = "identity", aes(fill=rides>0))+
+        coord_flip()
+    }
+    
+    
+  
+    
+    })
   
   # Render Bar Plot and Table
   output$bar_graph <- renderUI({

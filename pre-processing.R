@@ -110,4 +110,49 @@ map2(res, paste0("part_", names(res), ".csv"), write.csv)
 # library(qdapRegex)
 # lat_long$line = rm_between(lat_long$STATION_DESCRIPTIVE_NAME, '(', ')', extract=TRUE)
 # ==================================================================================================================================
+final_data %>%
+  mutate(sign = case_when(
+    rides < 0 ~ "Negative",
+    rides == 0 ~ "Zero",
+    rides > 0 ~ "Positive"
+  ))
 
+fig <- ggplot(data = final_data,
+       aes(x = as.character(stationname), y = rides))+
+  geom_bar(stat = "identity")+
+  coord_flip()
+
+print(fig)
+
+date1 <- "2021-07-15"
+date2 <- "2021-06-12"
+date_df_1 <- subset(final_data, final_data$date == date1)
+date_df_2 <- subset(final_data, final_data$date == date2)
+
+difference_df <- inner_join(x=date_df_1, y=date_df_2, by="station_id")
+difference_df <- subset(difference_df, select = c("station_id", "stationname.x", "date.x","date.y", "rides.x","rides.y", "line.x", "line_color.x")) 
+difference_df$rides <- difference_df$rides.x - difference_df$rides.y
+
+difference_df <- difference_df %>%
+  rename( stationname = stationname.x,
+          date_1 = date.x,
+          date_2 = date.y,
+          line = line.x)
+
+
+print(difference_df)
+
+
+difference_df %>%
+  mutate(sign = case_when(
+    rides < 0 ~ "Negative",
+    rides > -1 ~ "Positive"
+  ))
+
+fig <- ggplot(data = difference_df,
+              aes(x = difference_df$stationname, y = difference_df$rides))+
+  geom_bar(stat = "identity", aes(fill=rides>0))+
+  coord_flip()
+
+print(fig)
+str(difference_df)
