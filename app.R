@@ -217,7 +217,6 @@ server <- function(input, output, session){
           rides > -1 ~ "Positive"
         ))
       
-      print(difference_df)
       return(difference_df)
   })
   
@@ -303,7 +302,7 @@ server <- function(input, output, session){
     else{
       
       diff_df = multiDateReactive()
-      print(head(diff_df))
+      return(diff_df)
     }
   })
  
@@ -343,9 +342,10 @@ server <- function(input, output, session){
   
   #  reactive plotly function
   plot_1 <- reactive({
-    data <- dataframeReactive()
+    
     
     if(input$radio_single == 'single'){
+      data <- dataframeReactive()
       if(input$sortby == 'alpha'){
         data <- data[order(data$stationname),]
       }
@@ -359,12 +359,13 @@ server <- function(input, output, session){
       yform <- list(categoryorder = "array",
                     categoryarray = rev(data$stationname)
       )
-      p = plot_ly(data, y = data$stationname, x = data$rides, type = "bar", text=data$line) %>%
+      p = plot_ly(data, y = ~stationname, x = ~rides, type = "bar", text=~line) %>%
         layout(title = 'Ridership Data', yaxis = yform)
       return(p)  
     }
     
     else{
+      data <- dataframeReactive()
       if(input$sortby == 'alpha'){
         data <- data[order(data$stationname),]
       }
@@ -375,42 +376,15 @@ server <- function(input, output, session){
         data <- data[order(-data$rides),]  
       }
       
-      yform <- list(categoryorder = "array",
-                    categoryarray = rev(data$stationname)
-      )
       
-      
-      data %>%
-        mutate(sign = case_when(
-          rides < 0 ~ "negative",
-          rides == 0 ~ "zero",
-          rides > 0 ~ "positive"
-        ))
-      
-        # data$year_string <- as.character(data$year)
-        # data$year_string <- factor(data$year_string, levels = data$year_string)
-        # 
-        # 
-        # fig <- ggplot(data, aes(x=year_string, y=rides, label=rides)) +
-        #   + geom_bar(stat='identity', aes(fill=sign), width=.5) +
-        #    + scale_fill_manual(name="Ridership Change",
-        #                        +    labels = c("Negative", "Postive"),
-        #                        +    values = c("negative"="#00ba38", "postive"="#f8766d")) +
-        #   + labs(subtitle="Change in Ridership count as dates are compared",
-        #          +    title= "Diverging Bars") +
-        #   + coord_flip()
-      
-      
-      # fig <- ggplot(data = data,
-      #               aes(x = reorder(stationname, rides), y = rides, fill=rides>0))+
-      #   geom_bar(stat = "identity")+
-      #   coord_flip()
       fig <- ggplot(data = data,
                     aes(x = stationname, y = rides))+
-        geom_bar(stat = "identity", aes(fill=rides>0))+
+        geom_bar(stat = "identity", aes(fill=rides>0))+ 
+        labs(x = "Ride Difference", y = "Stations") + scale_fill_discrete(name = "Ridership Change") +
         coord_flip()
+      
     }
-    
+      return(fig)
     
   
     

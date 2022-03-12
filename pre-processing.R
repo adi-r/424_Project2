@@ -150,8 +150,9 @@ difference_df %>%
   ))
 
 fig <- ggplot(data = difference_df,
-              aes(x = difference_df$stationname, y = difference_df$rides))+
-  geom_bar(stat = "identity", aes(fill=rides>0))+
+              aes(x = difference_df$stationname, y = difference_df$rides, text = line))+
+  geom_bar(stat = "identity", aes(fill=rides>0))+ 
+  labs(x = "Ride Difference", y = "Stations") + scale_fill_discrete(name = "Ridership Change", ) +
   coord_flip()
 
 print(fig)
