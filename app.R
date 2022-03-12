@@ -50,6 +50,17 @@ map <- leaflet(options= leafletOptions(preferCanvas = T)) %>%
     position = "bottomright"
   )
 
+#Credits for below code snippet: https://stackoverflow.com/questions/70288989/programatically-trigger-marker-mouse-click-event-in-r-leaflet-for-shiny
+
+# create js function that triggers a click on a marker selected by station name
+jsCode <- 'shinyjs.markerClick = function(id) {
+              map.eachLayer(function (layer) {
+                if (layer.options.layerId == id) {
+                  layer.fire("click");
+                }
+              })
+           };'
+
 # UI==============================================================================================================
 ui <- dashboardPage(skin = "black",
                     dashboardHeader(title = "CS424 Project-2"),
@@ -64,7 +75,8 @@ ui <- dashboardPage(skin = "black",
                     ),
                     dashboardBody(
                       #using shinyjs to disable/enable inputs
-                      useShinyjs(),
+                      shinyjs::useShinyjs(),
+                      shinyjs::extendShinyjs(text = jsCode, functions = c('markerClick')),
                       tags$head(tags$style(".sidebar-menu li { margin-bottom: 20px; }")),
                       tabItems(
                         tabItem(tabName = "map_dash", 
@@ -237,45 +249,43 @@ server <- function(input, output, session){
   
   
   
-  #Change select based on map and vice-versa
+  
+  #Change value of Selectize input on map click
   observeEvent(input$map_dash_marker_click,{
-    print("map click event")
+    print("Station cicked on map")
     #updating select-input based on map
     click <- input$map_dash_marker_click
     station <- click$id
     leafletProxy("map_dash", session) %>%
-      clearPopups() %>% clearControls()
+      clearPopups() 
+    isolate({
     updateSelectInput(session, "select_station", 
                       selected = click$id)
-  })
-  
-  observeEvent(input$select_station,{
-    print('select station event')
-    stationReactive()
     })
-  
-  stationReactive <- reactive({
-  print('station reactive')
-    
-  station_name <- input$select_station
-  df <- dataframeReactive()
-  temp <- subset(df, df$stationname == station_name )
-  popup_temp = paste("<center><strong>" ,temp$stationname, "</strong>", "<br>",
-                     temp$line, "<br>",
-                     "Rides: ", temp$rides, "<br> </center>")
-  #Updating the map
-  leafletProxy("map_dash", session) %>%
-    clearPopups() %>%
-    #setView( lat = temp$lat, lng = temp$long, zoom = 10)  %>%
-    addPopups( lat = temp$lat, lng = temp$long, popup_temp)
   })
+  
+  #Map pop up on selectize Input 
+  observeEvent(input$select_station,{
+    print('Selectize Input Station selected ')
+    station_name <- input$select_station
+    df <- dataframeReactive()
+    temp <- subset(df, df$stationname == station_name )
+    isolate({
+    shinyjs::js$markerClick(temp$stationname)
+    })
+    })
   
 
   
   
-  #rendering map
+  #rendering map output
   output$map_dash <- renderLeaflet({
-    
+    map <- map %>% 
+      htmlwidgets::onRender("
+          function(el, x) {
+            map = this;
+          }"
+      )    
     #for single date
     if(input$radio_single == 'single'){
       df <- dataframeReactive()
@@ -319,9 +329,9 @@ server <- function(input, output, session){
                          radius = ~log(abs(rides)+10)*1.5,
                          color = ~line_color,
                          layerId = ~stationname,
-                         popup = paste("<center><strong>" ,df$stationname, "</strong>", "<br>",
-                                       df$line, "<br>",
-                                      "Change in Ridership: ", df$rides, "<br> </center>")
+                         popup = paste("<center><strong>" , diff_df$stationname, "</strong>", "<br>",
+                                       diff_df$line, "<br>",
+                                      "Change in Ridership: ", diff_df$rides, "<br> </center>")
                          ) %>%
         addLegend(position = "bottomleft",
                   colors = c("#ef8a62", "#67a9cf"),
