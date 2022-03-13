@@ -109,7 +109,7 @@ ui <- fluidPage(
         ),
         HTML("<br>"),HTML("<br>"),
         fluidRow(
-          selectInput('switch', "Graph Time Period", choices = c("Daily", "Yearly"),
+          selectInput('switch', "Graph Time Period", choices = c("Daily", "Weekly", "Monthly","Yearly"),
                          selected = "Daily")
         ),
         HTML("<br>"),
@@ -322,12 +322,14 @@ server <- function(input, output, session){
       date_df_1 <- subset(df, df$date == date1)
       date_df_2 <- subset(df, df$date == date2)
       
+      print(date_df_1)
       difference_df <- inner_join(x=date_df_1, y=date_df_2, by="station_id")
-      difference_df <- subset(difference_df, select = c("station_id", "stationname.x", "date.x", "date.y", "lat.x", "long.x", "rides.x","rides.y", "line.x", "line_color.x")) 
+      difference_df <- subset(difference_df, select = c("station_id", "stationname.x", "week_day.x","date.x", "date.y", "lat.x", "long.x", "rides.x","rides.y", "line.x", "line_color.x")) 
       difference_df$rides <- difference_df$rides.x - difference_df$rides.y
       
       difference_df <- difference_df %>%
         rename( stationname = stationname.x,
+                week_day = week_day.x,
                 date_1 = date.x,
                 date_2 = date.y,
                 line = line.x,
@@ -446,6 +448,7 @@ server <- function(input, output, session){
     if(input$radio_single == "single"){
       singleDate <- singleDateReactive()
       date_df <- subset(df, df$date == singleDate)
+      print(date_df)
     }
     else{
       
@@ -508,8 +511,10 @@ server <- function(input, output, session){
       yform <- list(categoryorder = "array",
                     categoryarray = rev(data$stationname)
       )
+      date_1 = data[1, 'date']
+      wday = data[1, 'week_day']
       p = plot_ly(data, y = ~stationname, x = ~rides, type = "bar", text=~line) %>%
-        layout(title = 'Ridership Data', yaxis = yform)
+        layout(title = paste(input$select_station, "Ridership Data", date_1, wday), yaxis = yform)
       return(p)  
     }
     
@@ -524,12 +529,14 @@ server <- function(input, output, session){
       else{
         data <- data[order(-data$rides),]  
       }
-      
-      
+      print(str(data))
+      date1 = data[1, 'date_1']
+      date2 = data[1, 'date_2']
       fig <- ggplot(data = data,
                     aes(x = stationname, y = rides))+
         geom_bar(stat = "identity", aes(fill=rides>0))+ 
         labs(x = "Ride Difference", y = "Stations") + scale_fill_discrete(name = "Ridership Change") +
+        ggtitle(paste(input$select_station, "Ridership Data", date1, date2)) +
         coord_flip()
       
     }
@@ -795,60 +802,93 @@ server <- function(input, output, session){
         #            column(12, uiOutput("year_table")),
         #            )
         #           )
+      # if(input$switch == "Daily"){
+      #   fluidRow(
+      #     column(4, 
+      #            fluidPage(
+      #              fluidRow(
+      #                column(8, div(plotOutput("daily_plot"))),
+      #                column(8, uiOutput("daily_table"))
+      #              )
+      #            )
+      #     ),
+      #     column(4, 
+      #            fluidPage(
+      #              fluidRow(
+      #                column(8, div(plotOutput("week_plot"))),
+      #                column(8, uiOutput("week_table"))
+      #              )
+      #            )
+      #     ),
+      #     column(4, 
+      #            fluidPage(
+      #              fluidRow(
+      #                column(8, div(plotOutput("month_plot"))),
+      #                column(8, uiOutput("month_table"))
+      #              )
+      #            )
+      #     )
+      #     )
+      # }
+      # else{
+      #   fluidRow(
+      #     column(4, 
+      #            fluidPage(
+      #              fluidRow(
+      #                column(8, div(plotOutput("year_plot"))),
+      #                column(8, uiOutput("yearly_table"))
+      #              )
+      #            )
+      #     ),
+      #     column(4, 
+      #            fluidPage(
+      #              fluidRow(
+      #                column(8, div(plotOutput("week_plot"))),
+      #                column(8, uiOutput("week_table"))
+      #              )
+      #            )
+      #     ),
+      #     column(4, 
+      #            fluidPage(
+      #              fluidRow(
+      #                column(8, div(plotOutput("month_plot"))),
+      #                column(8, uiOutput("month_table"))
+      #              )
+      #            )
+      #     ))
+      # }
+      
       if(input$switch == "Daily"){
-        fluidRow(
-          column(4, 
-                 fluidPage(
-                   fluidRow(
-                     column(8, div(plotOutput("daily_plot"))),
-                     column(8, uiOutput("daily_table"))
-                   )
-                 )
-          ),
-          column(4, 
-                 fluidPage(
-                   fluidRow(
-                     column(8, div(plotOutput("week_plot"))),
-                     column(8, uiOutput("week_table"))
-                   )
-                 )
-          ),
-          column(4, 
-                 fluidPage(
-                   fluidRow(
-                     column(8, div(plotOutput("month_plot"))),
-                     column(8, uiOutput("month_table"))
-                   )
-                 )
+        fluidPage(
+          fluidRow(
+            column(12, div(plotOutput("daily_plot"))),
+            column(12, uiOutput("daily_table"))
+                       )
+        )
+      }
+      else if(input$switch == "Weekly"){
+        fluidPage(
+          fluidRow(
+            column(12, div(plotOutput("week_plot"))),
+            column(12, uiOutput("week_table"))
           )
+        )
+      }
+      else if(input$switch == "Monthly"){
+        fluidPage(
+          fluidRow(
+            column(12, div(plotOutput("month_plot"))),
+            column(12, uiOutput("month_table"))
           )
+        )
       }
       else{
-        fluidRow(
-          column(4, 
-                 fluidPage(
-                   fluidRow(
-                     column(8, div(plotOutput("year_plot"))),
-                     column(8, uiOutput("yearly_table"))
-                   )
-                 )
-          ),
-          column(4, 
-                 fluidPage(
-                   fluidRow(
-                     column(8, div(plotOutput("week_plot"))),
-                     column(8, uiOutput("week_table"))
-                   )
-                 )
-          ),
-          column(4, 
-                 fluidPage(
-                   fluidRow(
-                     column(8, div(plotOutput("month_plot"))),
-                     column(8, uiOutput("month_table"))
-                   )
-                 )
-          ))
+        fluidPage(
+          fluidRow(
+            column(12, div(plotOutput("year_plot"))),
+            column(12, uiOutput("year_table"))
+          )
+        )
       }
       
           
