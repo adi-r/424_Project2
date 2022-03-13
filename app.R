@@ -339,8 +339,7 @@ server <- function(input, output, session){
       return(difference_df)
   })
   
-  
-  
+
   
   #Change value of Selectize input on map click
   observeEvent(input$map_dash_marker_click,{
