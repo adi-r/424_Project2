@@ -109,10 +109,16 @@ ui <- fluidPage(
         ),
         HTML("<br>"),HTML("<br>"),
         fluidRow(
+          selectInput('switch', "Graph Time Period", choices = c("Daily", "Yearly"),
+                         selected = "Daily")
+        ),
+        HTML("<br>"),
+        fluidRow(
           selectInput("year", "Year",
                       choices = c("All", 2021:2001),
                       selected = c(2021)
                       )
+          
           )
         )#Wellpanel1
       ), #Column-1
@@ -134,7 +140,7 @@ ui <- fluidPage(
            #Yearly graph column 
            column( width = 4,
                    
-                   column(width = 12,
+                   column(width = 8,
                           
                           #The yearly graph for station goes here 
                           fluidRow(uiOutput("plot_and_table"))
@@ -522,7 +528,7 @@ server <- function(input, output, session){
       
       fig <- ggplot(data = data,
                     aes(x = stationname, y = rides))+
-        geom_bar(stat = "identity", aes(fill=rides>0))+ + ggtitle(paste(input$select_station, "CTA Station")) +
+        geom_bar(stat = "identity", aes(fill=rides>0))+ 
         labs(x = "Ride Difference", y = "Stations") + scale_fill_discrete(name = "Ridership Change") +
         coord_flip()
       
@@ -789,41 +795,63 @@ server <- function(input, output, session){
         #            column(12, uiOutput("year_table")),
         #            )
         #           )
+      if(input$switch == "Daily"){
+        fluidRow(
+          column(4, 
+                 fluidPage(
+                   fluidRow(
+                     column(8, div(plotOutput("daily_plot"))),
+                     column(8, uiOutput("daily_table"))
+                   )
+                 )
+          ),
+          column(4, 
+                 fluidPage(
+                   fluidRow(
+                     column(8, div(plotOutput("week_plot"))),
+                     column(8, uiOutput("week_table"))
+                   )
+                 )
+          ),
+          column(4, 
+                 fluidPage(
+                   fluidRow(
+                     column(8, div(plotOutput("month_plot"))),
+                     column(8, uiOutput("month_table"))
+                   )
+                 )
+          )
+          )
+      }
+      else{
+        fluidRow(
+          column(4, 
+                 fluidPage(
+                   fluidRow(
+                     column(8, div(plotOutput("year_plot"))),
+                     column(8, uiOutput("yearly_table"))
+                   )
+                 )
+          ),
+          column(4, 
+                 fluidPage(
+                   fluidRow(
+                     column(8, div(plotOutput("week_plot"))),
+                     column(8, uiOutput("week_table"))
+                   )
+                 )
+          ),
+          column(4, 
+                 fluidPage(
+                   fluidRow(
+                     column(8, div(plotOutput("month_plot"))),
+                     column(8, uiOutput("month_table"))
+                   )
+                 )
+          ))
+      }
       
-          fluidRow(
-            column(4, 
-                   fluidPage(
-                     fluidRow(
-                       column(4, div(plotOutput("daily_plot"))),
-                       column(4, uiOutput("daily_table"))
-                       )
-                     )
-                   ),
-            column(4, 
-                   fluidPage(
-                     fluidRow(
-                       column(4, div(plotOutput("week_plot"))),
-                       column(4, uiOutput("week_table"))
-                     )
-                   )
-            ),
-            column(4, 
-                   fluidPage(
-                     fluidRow(
-                       column(4, div(plotOutput("month_plot"))),
-                       column(4, uiOutput("month_table"))
-                     )
-                   )
-            ),
-            column(4, 
-                   fluidPage(
-                     fluidRow(
-                       column(4, div(plotOutput("year_plot"))),
-                       column(4, uiOutput("year_table"))
-                     )
-                   )
-            )
-            )
+          
           
       })
     
