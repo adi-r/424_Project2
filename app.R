@@ -302,6 +302,7 @@ server <- function(input, output, session){
     else{
       
       diff_df = multiDateReactive()
+      print(diff_df)
       return(diff_df)
     }
   })
@@ -379,7 +380,7 @@ server <- function(input, output, session){
       
       fig <- ggplot(data = data,
                     aes(x = stationname, y = rides))+
-        geom_bar(stat = "identity", aes(fill=rides>0))+ 
+        geom_bar(stat = "identity", aes(fill=rides>0))+ + ggtitle(paste(input$select_station, "CTA Station")) +
         labs(x = "Ride Difference", y = "Stations") + scale_fill_discrete(name = "Ridership Change") +
         coord_flip()
       
@@ -611,13 +612,13 @@ server <- function(input, output, session){
     # GRAPHS========================================
       output$daily_plot <- renderPlot({
         ggplot(data = daily_df(input$year, input$select_station), aes(x = date, y = rides)) +
-          geom_bar(stat = "identity", aes(fill = rides)) +
+          geom_bar(stat = "identity", aes(fill = rides)) + 
           labs(x = "Date", y ="Rides", title = "Daily Entries") + scale_y_continuous(labels = comma)
       })
       
       output$week_plot <- renderPlot({
         ggplot(data = week_df(input$year, input$select_station), aes(x = factor(days, c("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")), y = rides)) +
-          geom_bar(stat = "identity", aes(fill = rides)) +
+          geom_bar(stat = "identity", aes(fill = rides)) + 
           labs(x = "Week Day", y ="Rides", title = "Weekly entries") + scale_y_continuous(labels = comma)
       })
       
@@ -629,7 +630,7 @@ server <- function(input, output, session){
       
       output$year_plot <- renderPlot({
         ggplot(data = year_df(input$select_station), aes(x = year, y = rides)) +
-          geom_bar(stat = "identity", aes(fill = rides)) +
+          geom_bar(stat = "identity", aes(fill = rides)) + 
           labs(x = "Year", y ="Rides", title = "Yearly entries") + scale_y_continuous(labels = comma)
       })
       
