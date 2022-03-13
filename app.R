@@ -61,118 +61,210 @@ jsCode <- 'shinyjs.markerClick = function(id) {
               })
            };'
 
+
 # UI==============================================================================================================
-ui <- dashboardPage(skin = "black",
-                    dashboardHeader(title = "CS424 Project-2"),
-                    dashboardSidebar(collapsed = FALSE, disable = FALSE,
-                                     sidebarMenu(
-                                       id = "menu_tabs",
-                                       tags$div(style = "margin-top: 300px;"),
-                                       menuItem("Dashboard", tabName = "map_dash", selected = TRUE, icon = icon("dashboard")),
-                                       menuItem("About", tabName = "about", icon = icon("sunglasses", lib = "glyphicon"))
-                                       
-                                     )
-                    ),
-                    dashboardBody(
-                      #using shinyjs to disable/enable inputs
-                      shinyjs::useShinyjs(),
-                      shinyjs::extendShinyjs(text = jsCode, functions = c('markerClick')),
-                      tags$head(tags$style(".sidebar-menu li { margin-bottom: 20px; }")),
-                      tabItems(
-                        tabItem(tabName = "map_dash", 
-                                sidebarLayout(position = "left",
-                                              sidebarPanel(style = "margin-top: 70%",
-                                                           width = 3,
-                                                           fluidPage(
-                                                             #Radio buttons
-                                                             div(fluidRow(column(8,
-                                                                             radioButtons("radio_single", "Select mode",
-                                                                                          c("Single Date" = "single",
-                                                                                            "Comparison" = "compare"),
-                                                                                          inline = FALSE))),
-                                                             #date picker for single date
-                                                             fluidRow(
-                                                               dateInput("date", label="Single Dates", value = "2021-08-23",
-                                                                       min="2001-01-01", max="2021-11-30", format = "yyyy/mm/dd")
-                                                             )),
-                                                             #date range for comparison
-                                                             fluidRow(dateRangeInput("date1", label="Compare Dates", start = "2021-08-23", end = "2001-08-23",  min="2001-01-01", max="2021-11-30", format = "yyyy/mm/dd",
-                                                                            separator = "and")),
-                                                             fluidRow(
-                                                               column(6,
-                                                                      actionButton(inputId = "prevButton", label = "Prev")),
-                                                               column(6,
-                                                                      actionButton(inputId = "nextButton", label = "Next"))
-                                                             ),
-                                                             HTML("<br>"),
-                                                             div(selectizeInput('select_station', "Select Station", choices = stations,
-                                                                               selected = "UIC-Halsted")
-                                                             
-                                                             ),
-                                                             HTML("<br>"),
-                                                             div(
-                                                               fluidRow(
-                                                                 selectInput("sortby", "Bar Plot View", choices = c("Alphabetical" = "alpha", "Ascending" = 'asc', "Descending" = "desc")),
-                                                               )
-                                                             ),
-                                                             fluidRow(column(8,
-                                                                             div(selectInput("year", "Year",
-                                                                                             choices = c("All", 2021:2001),
-                                                                                             selected = c(2021)
-                                                                             )
-                                                                             )
-                                                             )
-                                                             )
-                                                             )
-                                                           
-                                              ),
-                                              
-                                              mainPanel(
-                                                # fluidRow(
-                                                #   column(12,
-                                                #          leafletOutput("map_dash")),
-                                                #   column(12,
-                                                #          uiOutput("bar_graph"),),
-                                                #   column(12,
-                                                #          uiOutput("plot_and_table"))
-                                                # )
-                                                # leafletOutput("map_dash"),
-                                                # uiOutput("bar_graph"),
-                                                # uiOutput("plot_and_table")
-                                                 fluidPage(
-                                                  #splitLayout(cellWidths = c("100%", "100%", "400%"), leafletOutput("map_dash"), uiOutput("bar_graph"), uiOutput("plot_and_table")),
-                                                  splitLayout(
-                                                    cellWidths = 1000,
-                                                    cellArgs = list(style = "padding: 6px"),
-                                                    leafletOutput("map_dash"),
-                                                    uiOutput("bar_graph"),
-                                                    uiOutput("plot_and_table")
-                                                  )
-                                                  #Leaflet Map UI
-                                                  # column(width = 12,
-                                                  #        leafletOutput("map_dash"))
-                                                  )
-                                                )
-                        )
-                      ),
-                        
-                        tabItem(tabName = "about",
-                                tags$div(style = "margin-top: 200px;"),
-                                h1('About'),
-                                h2('Created by Aditya Ranganathan on 02/07/2022'),
-                                h3(""),
-                                h3(""),
-                                h3("The dashboard displays data reagrding CTA rides in a clear and intuitive manner.
-                 Users can check ride data of 3 different CTA stations: O'Hare Airport, UIC-Halsted and Racine.
-                 The data can be viewed from a yearly, monthly, weekly or daily basis. Users have the option of seeing the data either as plots or in a tabular form"),
-                                h3("Users can get an idea about the number of passengers that travel through the 'L' and can also correlate certain major events that occurred in Chicago with respect to the number of riders during that time period."),
-                                h3("Data was sourced from from the Chicago Data Portal at", tags$a(href="https://data.cityofchicago.org/Transportation/CTA-Ridership-L-Station-Entries-Daily-Totals/5neh-572f/data", "this link")),
-                                h3("The dataset consists of 1.1 million rows and has attributes 'stationname', 'station_id', 'date', 'rides' and 'daytype'")
-                                
-                        )
+ui <- fluidPage(
+  shinyjs::useShinyjs(),
+  shinyjs::extendShinyjs(text = jsCode, functions = c('markerClick')),
+  titlePanel("CS424 Project-2"),
+  fluidRow(
+    #height = "100%",
+    #column-1 for about and controls 
+    column( width = 2,
+      wellPanel(
+        #About goes here
+        
+        style = "height:85vh; margin-top: 80%", 
+        fluidRow(
+          radioButtons("radio_single", "Select mode",
+                       c("Single Date" = "single","Comparison" = "compare"),
+                       inline = FALSE)
+          ),
+        HTML("<br>"),HTML("<br>"),
+        #date picker for single date
+        fluidRow(
+          dateInput("date", label="Single Dates", value = "2021-08-23",
+                    min="2001-01-01", max="2021-11-30", format = "yyyy/mm/dd")
+        ),
+        HTML("<br>"),HTML("<br>"),
+        
+        #date range for comparison
+        fluidRow(dateRangeInput("date1", label="Compare Dates", start = "2021-08-23", end = "2015-08-23",  min="2001-01-01", max="2021-11-30", format = "yyyy/mm/dd",
+                                separator = "and")),
+        HTML("<br>"),HTML("<br>"),
+        #next and prev buttons
+        fluidRow(
+          column(6,
+                 actionButton(inputId = "prevButton", label = "Prev")),
+          column(6,
+                 actionButton(inputId = "nextButton", label = "Next"))
+        ),
+        fluidRow(
+          selectInput("sortby", "Bar Plot View", choices = c("Alphabetical" = "alpha", "Ascending" = 'asc', "Descending" = "desc")),
+        ),
+        HTML("<br>"),HTML("<br>"),
+        fluidRow(
+          selectizeInput('select_station', "Select Station", choices = stations,
+                         selected = "UIC-Halsted")
+        ),
+        HTML("<br>"),HTML("<br>"),
+        fluidRow(
+          selectInput("year", "Year",
+                      choices = c("All", 2021:2001),
+                      selected = c(2021)
                       )
-                    )
-)
+          )
+        )#Wellpanel1
+      ), #Column-1
+    
+    #Rest of the stuff
+    column(width = 10,
+           
+           #Bar plot column 
+           column(width = 4,
+           fluidRow( style = "height:85vh;", plotlyOutput(height = "100%", "bar_graph"))
+           ),
+           
+           #Line data Table and map column
+           column( width = 4,
+             fluidRow(style = "height:15vh;", uiOutput(height = "85%", style ="width: 50%;","main_table")),
+             fluidRow(style = "margin-top:300px; height:60vh;",leafletOutput(height = "90%","map_dash"))
+           ),
+           
+           #Yearly graph column 
+           column( width = 4,
+                   
+                   column(width = 12,
+                          
+                          #The yearly graph for station goes here 
+                          fluidRow(uiOutput("plot_and_table"))
+                   )
+                   
+             
+           )
+          
+           )
+    
+    
+    
+    )
+  )
+
+# ui <- dashboardPage(skin = "black",
+#                     dashboardHeader(title = "CS424 Project-2"),
+#                     dashboardSidebar(collapsed = FALSE, disable = FALSE,
+#                                      sidebarMenu(
+#                                        id = "menu_tabs",
+#                                        tags$div(style = "margin-top: 300px;"),
+#                                        menuItem("Dashboard", tabName = "map_dash", selected = TRUE, icon = icon("dashboard")),
+#                                        menuItem("About", tabName = "about", icon = icon("sunglasses", lib = "glyphicon"))
+#                                        
+#                                      )
+#                     ),
+#                     dashboardBody(
+#                       #using shinyjs to disable/enable inputs
+#                      
+#                       #tags$head(tags$style(".sidebar-menu li { margin-bottom: 20px; }")),
+#                       tabItems(
+#                         tabItem(tabName = "map_dash", 
+#                                 fluidPage(
+#                                   sidebarLayout(position = "left",
+#                                                 sidebarPanel(style = "margin-top: 70%",
+#                                                              width = 2,
+#                                                              #Radio buttons
+#                                                              fluidRow(
+#                                                                column(8,
+#                                                                       radioButtons("radio_single", "Select mode",
+#                                                                                    c("Single Date" = "single",
+#                                                                                      "Comparison" = "compare"),
+#                                                                                    inline = FALSE)
+#                                                                       )
+#                                                                ),
+#                                                              #date picker for single date
+#                                                              fluidRow(
+#                                                                dateInput("date", label="Single Dates", value = "2021-08-23",
+#                                                                        min="2001-01-01", max="2021-11-30", format = "yyyy/mm/dd")
+#                                                              ),
+#                                                              #date range for comparison
+#                                                              fluidRow(dateRangeInput("date1", label="Compare Dates", start = "2021-08-23", end = "2001-08-23",  min="2001-01-01", max="2021-11-30", format = "yyyy/mm/dd",
+#                                                                             separator = "and")),
+#                                                              #next and prev buttons
+#                                                              fluidRow(
+#                                                                column(6,
+#                                                                       actionButton(inputId = "prevButton", label = "Prev")),
+#                                                                column(6,
+#                                                                       actionButton(inputId = "nextButton", label = "Next"))
+#                                                              ),
+#                                                              HTML("<br>"),
+#                                                              div(selectizeInput('select_station', "Select Station", choices = stations,
+#                                                                                selected = "UIC-Halsted")
+#                                                              
+#                                                              ),
+#                                                              HTML("<br>"),
+#                                                              div(
+#                                                                fluidRow(
+#                                                                  selectInput("sortby", "Bar Plot View", choices = c("Alphabetical" = "alpha", "Ascending" = 'asc', "Descending" = "desc")),
+#                                                                )
+#                                                              ),
+#                                                              fluidRow(column(8,
+#                                                                              div(selectInput("year", "Year",
+#                                                                                              choices = c("All", 2021:2001),
+#                                                                                              selected = c(2021)
+#                                                                              )
+#                                                                              )
+#                                                              )
+#                                                              )
+#                                                             
+#                                                            
+#                                               ),
+#                                               
+#                                               mainPanel(
+#                                                 
+#                                                 # fluidRow(
+#                                                 #   column(12,
+#                                                 #          leafletOutput("map_dash")),
+#                                                 #   column(12,
+#                                                 #          uiOutput("bar_graph"),),
+#                                                 #   column(12,dddfd
+#                                                 #          uiOutput("plot_and_table"))
+#                                                 # )
+#                                                 # leafletOutput("map_dash"),
+#                                                 # uiOutput("bar_graph"),
+#                                                 # uiOutput("plot_and_table")
+#                                                  fluidPage(
+#                                                   #splitLayout(cellWidths = c("100%", "100%", "400%"), leafletOutput("map_dash"), uiOutput("bar_graph"), uiOutput("plot_and_table")),
+#                                                   splitLayout(
+#                                                     cellWidths = 1000,
+#                                                     cellArgs = list(style = "padding: 6px"),
+#                                                     leafletOutput("map_dash"),
+#                                                     uiOutput("bar_graph"),
+#                                                     uiOutput("plot_and_table")
+#                                                   )
+#                                                   #Leaflet Map UI
+#                                                   # column(width = 12,
+#                                                   #        leafletOutput("map_dash"))
+#                                                   )
+#                                                 )
+#                         )
+#                       )),
+#                         
+#                         tabItem(tabName = "about",
+#                                 tags$div(style = "margin-top: 200px;"),
+#                                 h1('About'),
+#                                 h2('Created by Aditya Ranganathan on 02/07/2022'),
+#                                 h3(""),
+#                                 h3(""),
+#                                 h3("The dashboard displays data reagrding CTA rides in a clear and intuitive manner.
+#                  Users can check ride data of 3 different CTA stations: O'Hare Airport, UIC-Halsted and Racine.
+#                  The data can be viewed from a yearly, monthly, weekly or daily basis. Users have the option of seeing the data either as plots or in a tabular form"),
+#                                 h3("Users can get an idea about the number of passengers that travel through the 'L' and can also correlate certain major events that occurred in Chicago with respect to the number of riders during that time period."),
+#                                 h3("Data was sourced from from the Chicago Data Portal at", tags$a(href="https://data.cityofchicago.org/Transportation/CTA-Ridership-L-Station-Entries-Daily-Totals/5neh-572f/data", "this link")),
+#                                 h3("The dataset consists of 1.1 million rows and has attributes 'stationname', 'station_id', 'date', 'rides' and 'daytype'")
+#                                 
+#                         )
+#                       )
+#                     )
+# )
 
 
 
@@ -317,9 +409,11 @@ server <- function(input, output, session){
       
       #changing line color acc to + or - ridership change
       diff_df <- transform(diff_df, line_color = ifelse(diff_df$rides < 0, "#ef8a62", "#67a9cf"))
-      print(head(diff_df))
+      #print(head(diff_df))
+      
       #Transforming all ride change as +
       #difference_df$rides <- abs(difference_df$rides)
+      
       map <- map %>%
         clearPopups() %>%
         clearMarkers() %>%
@@ -440,11 +534,10 @@ server <- function(input, output, session){
     })
   
   # Render Bar Plot and Table
-  output$bar_graph <- renderUI({
-    fluidPage(
-      fluidRow(column(8, div(renderPlotly({plot_1()})))),
-      fluidRow(column(8, uiOutput("bar_table")))
-      )
+  output$bar_graph <- renderPlotly( {plot_1()} )
+
+  output$main_table <- renderUI({
+    uiOutput("bar_table")
   })
   
   # GRAPHS AND TABLES===================================================================================================== 
