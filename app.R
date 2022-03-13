@@ -73,25 +73,32 @@ ui <- fluidPage(
     column( width = 2,
       wellPanel(
         #About goes here
+        HTML(" <h1><b>About</b></h1> 
+             <h2>Developed as part of Project 2 for CS424 (Visualization and Visual Analytics) - UIC Spring 2022</h2>
+             <h2><b>Authors:</b> Aditya R, Krishnan CS </h2>
+             <h2> <b>Created February 5th, 2022</b></h2>,
+             <h3> This App presents the Chicago CTA Ridership data and Lat/Long data obtained from the Chicago Data Portal website </h3>
+             <h3> <b> *Data Sources: </b></h3>
+             <h3><a href=\"https://data.cityofchicago.org/Transportation/CTA-Ridership-L-Station-Entries-Daily-Totals/5neh-572f\">link L-Ridership data</a> </h3>
+          <h3>  <a href=\"https://data.cityofchicago.org/Transportation/CTA-System-Information-List-of-L-Stops/8pix-ypme\">link L-System_Information data</a> </h3>
+          </br>"),
         
-        style = "height:85vh; margin-top: 80%", 
-        fluidRow(
+        style = "height:85vh;", 
+        fluidRow(style = "margin-top:15%",
           radioButtons("radio_single", "Select mode",
                        c("Single Date" = "single","Comparison" = "compare"),
                        inline = FALSE)
           ),
-        HTML("<br>"),HTML("<br>"),
+        
         #date picker for single date
         fluidRow(
           dateInput("date", label="Single Dates", value = "2021-08-23",
                     min="2001-01-01", max="2021-11-30", format = "yyyy/mm/dd")
         ),
-        HTML("<br>"),HTML("<br>"),
         
         #date range for comparison
         fluidRow(dateRangeInput("date1", label="Compare Dates", start = "2021-08-23", end = "2015-08-23",  min="2001-01-01", max="2021-11-30", format = "yyyy/mm/dd",
                                 separator = "and")),
-        HTML("<br>"),HTML("<br>"),
         #next and prev buttons
         fluidRow(
           column(6,
@@ -99,20 +106,21 @@ ui <- fluidPage(
           column(6,
                  actionButton(inputId = "nextButton", label = "Next"))
         ),
+        HTML("<br>"),
         fluidRow(
           selectInput("sortby", "Bar Plot View", choices = c("Alphabetical" = "alpha", "Ascending" = 'asc', "Descending" = "desc")),
         ),
-        HTML("<br>"),HTML("<br>"),
+        
         fluidRow(
           selectizeInput('select_station', "Select Station", choices = stations,
                          selected = "UIC-Halsted")
         ),
-        HTML("<br>"),HTML("<br>"),
+        
         fluidRow(
           selectInput('switch', "Graph Time Period", choices = c("Daily", "Weekly", "Monthly","Yearly"),
                          selected = "Daily")
         ),
-        HTML("<br>"),
+        
         fluidRow(
           selectInput("year", "Year",
                       choices = c("All", 2021:2001),
@@ -139,14 +147,8 @@ ui <- fluidPage(
            
            #Yearly graph column 
            column( width = 4,
-                   
-                   column(width = 8,
-                          
-                          #The yearly graph for station goes here 
-                          fluidRow(uiOutput("plot_and_table"))
-                   )
-                   
-             
+                   #The yearly graph for station goes here 
+                    fluidRow(uiOutput("plot_and_table"))
            )
           
            )
@@ -860,16 +862,18 @@ server <- function(input, output, session){
       
       if(input$switch == "Daily"){
         fluidPage(
-          fluidRow(
+          fluidRow( style = "height:40vh;",
             column(12, div(plotOutput("daily_plot"))),
+            HTML("</br></br></br></br></br>"),
             column(12, uiOutput("daily_table"))
                        )
         )
       }
       else if(input$switch == "Weekly"){
-        fluidPage(
+        fluidPage( style = "height:40vh;",
           fluidRow(
             column(12, div(plotOutput("week_plot"))),
+            HTML("</br></br></br></br></br>"),
             column(12, uiOutput("week_table"))
           )
         )
@@ -878,6 +882,7 @@ server <- function(input, output, session){
         fluidPage(
           fluidRow(
             column(12, div(plotOutput("month_plot"))),
+            HTML("</br></br></br></br></br>"),
             column(12, uiOutput("month_table"))
           )
         )
@@ -886,6 +891,8 @@ server <- function(input, output, session){
         fluidPage(
           fluidRow(
             column(12, div(plotOutput("year_plot"))),
+            HTML("</br></br></br></br></br>"),
+            
             column(12, uiOutput("year_table"))
           )
         )
